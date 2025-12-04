@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Configurações de Preço - PowerPix Admin{% endblock %}
+{% block page_title %}Configurações de Preço{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">Configurações de Preço</h1>
+            <p class="text-gray-600 mt-2">Gerencie os preços dinâmicos do pack de apostas</p>
+        </div>
+        <a href="/admin/dashboard" class="inline-flex items-center justify-center rounded-lg border-2 border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:scale-[1.02]">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                <path d="M19 12H5"></path>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Voltar ao Dashboard
+        </a>
+    </div>
+
+    <!-- Alertas -->
+    {% if error %}
+    <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div class="flex items-start gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 flex-shrink-0">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <div>
+                <p class="font-medium">Erro</p>
+                <p>{{ error }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div class="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+        <div class="flex items-start gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 flex-shrink-0">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <div>
+                <p class="font-medium">Sucesso</p>
+                <p>{{ success }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Formulário de Configuração -->
+    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2">Gestão de Promoção</h2>
+            <p class="text-sm text-muted-foreground">
+                Configure o preço do pack de apostas. O sistema aplica a seguinte lógica:
+            </p>
+            <ul class="mt-3 space-y-1 text-sm text-muted-foreground list-disc list-inside">
+                <li>Se <strong>Preço Fixo</strong> estiver definido e promoção ativa: usa o preço fixo</li>
+                <li>Se <strong>Desconto %</strong> estiver definido e promoção ativa: aplica desconto sobre o preço padrão</li>
+                <li>Caso contrário: usa o preço padrão (R$ {{ "%.2f"|format(config.default_pack_price) }})</li>
+            </ul>
+        </div>
+
+        <form method="post" action="/admin/configs/price" class="space-y-6">
+            <!-- Preço Padrão -->
+            <div class="space-y-2">
+                <label for="default_pack_price" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Preço Padrão do Pack (R$)
+                </label>
+                <input
+                    type="number"
+                    id="default_pack_price"
+                    name="default_pack_price"
+                    step="0.01"
+                    min="0"
+                    value="{{ config.default_pack_price }}"
+                    required
+                    class="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="25.00"
+                />
+                <p class="text-xs text-muted-foreground">Este é o preço base usado quando não há promoção ativa</p>
+            </div>
+
+            <!-- Preço Fixo (Override) -->
+            <div class="space-y-2">
+                <label for="override_price" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Preço Fixo para Promoção (R$)
+                </label>
+                <input
+                    type="number"
+                    id="override_price"
+                    name="override_price"
+                    step="0.01"
+                    min="0"
+                    value="{{ config.override_price if config.override_price > 0 else '' }}"
+                    class="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="0.00 (deixe vazio para desabilitar)"
+                />
+                <p class="text-xs text-muted-foreground">
+                    Se definido e promoção ativa, este valor será usado (ignora desconto percentual)
+                </p>
+            </div>
+
+            <!-- Desconto Percentual -->
+            <div class="space-y-2">
+                <label for="current_discount_percent" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Porcentagem de Desconto (%)
+                </label>
+                <input
+                    type="number"
+                    id="current_discount_percent"
+                    name="current_discount_percent"
+                    step="1"
+                    min="0"
+                    max="100"
+                    value="{{ config.current_discount_percent }}"
+                    class="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="0"
+                />
+                <p class="text-xs text-muted-foreground">
+                    Desconto aplicado sobre o preço padrão (0-100%). Só funciona se promoção estiver ativa e preço fixo não estiver definido
+                </p>
+            </div>
+
+            <!-- Toggle Promoção Ativa -->
+            <div class="flex items-center space-x-3">
+                <input
+                    type="checkbox"
+                    id="is_promo_active"
+                    name="is_promo_active"
+                    {% if config.is_promo_active %}checked{% endif %}
+                    class="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-500"
+                />
+                <label for="is_promo_active" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Ativar Promoção
+                </label>
+            </div>
+            <p class="text-xs text-muted-foreground ml-7">
+                Quando ativada, o sistema aplica o preço fixo (se definido) ou o desconto percentual sobre o preço padrão
+            </p>
+
+            <!-- Preview do Preço Final -->
+            <div class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <h3 class="text-sm font-semibold text-blue-900">Preview do Preço Final</h3>
+                </div>
+                <div id="price-preview" class="text-2xl font-bold text-blue-900">
+                    Calculando...
+                </div>
+                <p class="text-xs text-blue-700 mt-1" id="price-explanation"></p>
+            </div>
+
+            <!-- Botões -->
+            <div class="flex justify-end gap-3 pt-4 border-t">
+                <a href="/admin/dashboard" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                    Cancelar
+                </a>
+                <button
+                    type="submit"
+                    class="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Salvar Configurações
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Informações Adicionais -->
+    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h3 class="text-lg font-semibold mb-4">Como Funciona</h3>
+        <div class="space-y-4 text-sm text-muted-foreground">
+            <div>
+                <h4 class="font-medium text-foreground mb-1">1. Preço Fixo (Prioridade Máxima)</h4>
+                <p>Se você definir um preço fixo e ativar a promoção, esse valor será sempre usado, ignorando qualquer desconto percentual.</p>
+            </div>
+            <div>
+                <h4 class="font-medium text-foreground mb-1">2. Desconto Percentual</h4>
+                <p>Se não houver preço fixo definido, mas houver desconto percentual e promoção ativa, o sistema calcula: <code class="bg-gray-100 px-1 rounded">Preço Final = Preço Padrão × (1 - Desconto/100)</code></p>
+            </div>
+            <div>
+                <h4 class="font-medium text-foreground mb-1">3. Preço Padrão</h4>
+                <p>Se a promoção estiver desativada ou nenhum desconto/preço fixo estiver configurado, o preço padrão será usado.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Função para calcular e exibir preview do preço
+function updatePricePreview() {
+    const defaultPrice = parseFloat(document.getElementById('default_pack_price').value) || 25.00;
+    const overridePrice = parseFloat(document.getElementById('override_price').value) || 0;
+    const discountPercent = parseInt(document.getElementById('current_discount_percent').value) || 0;
+    const isPromoActive = document.getElementById('is_promo_active').checked;
+    
+    let finalPrice = defaultPrice;
+    let explanation = '';
+    
+    if (isPromoActive) {
+        if (overridePrice > 0) {
+            finalPrice = overridePrice;
+            explanation = `Usando preço fixo de R$ ${overridePrice.toFixed(2)} (promoção ativa)`;
+        } else if (discountPercent > 0) {
+            const discountFactor = 1 - (discountPercent / 100);
+            finalPrice = defaultPrice * discountFactor;
+            explanation = `Aplicando ${discountPercent}% de desconto sobre R$ ${defaultPrice.toFixed(2)} = R$ ${finalPrice.toFixed(2)}`;
+        } else {
+            explanation = `Usando preço padrão (nenhum desconto/preço fixo configurado)`;
+        }
+    } else {
+        explanation = `Usando preço padrão (promoção desativada)`;
+    }
+    
+    document.getElementById('price-preview').textContent = `R$ ${finalPrice.toFixed(2)}`;
+    document.getElementById('price-explanation').textContent = explanation;
+}
+
+// Adicionar listeners aos campos
+document.getElementById('default_pack_price').addEventListener('input', updatePricePreview);
+document.getElementById('override_price').addEventListener('input', updatePricePreview);
+document.getElementById('current_discount_percent').addEventListener('input', updatePricePreview);
+document.getElementById('is_promo_active').addEventListener('change', updatePricePreview);
+
+// Calcular preview inicial
+updatePricePreview();
+</script>
+{% endblock %}
+

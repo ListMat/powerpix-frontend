@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Concursos - PowerPix Admin{% endblock %}
+{% block page_title %}Gestão de Concursos{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header com Botão Criar -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">Concursos</h1>
+            <p class="text-gray-600 mt-2">Gerencie todos os concursos do sistema</p>
+        </div>
+        <button onclick="document.getElementById('criarModal').classList.remove('hidden')" class="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg hover:scale-[1.02]">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="16"></line>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+            Novo Concurso
+        </button>
+    </div>
+
+    <!-- Lista de Concursos -->
+    {% if concursos %}
+    <div class="grid gap-4">
+        {% for item in concursos %}
+        {% set c = item.concurso %}
+        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                        <h3 class="text-xl font-semibold text-gray-900">{{ c.titulo }}</h3>
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                            {% if c.status.value == 'ATIVO' %}bg-green-100 text-green-800
+                            {% elif c.status.value == 'SORTEADO' %}bg-blue-100 text-blue-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ c.status.value }}
+                        </span>
+                        {% if c.is_drawn %}
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800">
+                            Sorteado
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                        <div>
+                            <p class="text-xs text-gray-500">Prêmio Total</p>
+                            <p class="text-lg font-semibold text-gray-900">R$ {{ "%.2f"|format(c.premio_total) }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">Preço da Cota</p>
+                            <p class="text-lg font-semibold text-gray-900">R$ {{ "%.2f"|format(c.preco_cota) }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">Total de Apostas</p>
+                            <p class="text-lg font-semibold text-gray-900">{{ item.total_apostas }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">Arrecadado</p>
+                            <p class="text-lg font-semibold text-gray-900">R$ {{ "%.2f"|format(item.total_arrecadado) }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 text-sm text-gray-500">
+                        <p>Criado em: {{ c.data_criacao.strftime("%d/%m/%Y %H:%M") if c.data_criacao else "N/A" }}</p>
+                        {% if c.data_sorteio_prevista %}
+                        <p>Sorteio previsto: {{ c.data_sorteio_prevista.strftime("%d/%m/%Y %H:%M") if c.data_sorteio_prevista else "N/A" }}</p>
+                        {% endif %}
+                        {% if c.data_sorteio_realizado %}
+                        <p>Sorteio realizado: {{ c.data_sorteio_realizado.strftime("%d/%m/%Y %H:%M") if c.data_sorteio_realizado else "N/A" }}</p>
+                        {% endif %}
+                        {% if item.total_ganhadores > 0 %}
+                        <p class="text-green-600 font-medium">🎉 {{ item.total_ganhadores }} ganhador(es)</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="flex flex-col gap-2 ml-4">
+                    <a href="/admin/concursos/{{ c.id }}" class="inline-flex items-center justify-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-purple-700 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        Ver Detalhes
+                    </a>
+                    {% if not c.is_drawn %}
+                    <button onclick="editarConcurso({{ c.id }}, '{{ c.titulo }}', {{ c.premio_total }}, {{ c.preco_cota }}, '{{ c.data_sorteio_prevista.isoformat() if c.data_sorteio_prevista else "" }}', {{ c.is_active|lower }})" class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
+                        Editar
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="rounded-xl border border-gray-200 bg-white p-12 text-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto text-gray-400 mb-4">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+        </svg>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Nenhum concurso encontrado</h3>
+        <p class="text-sm text-gray-500 mb-4">Crie seu primeiro concurso para começar</p>
+        <button onclick="document.getElementById('criarModal').classList.remove('hidden')" class="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 px-4 py-2 text-sm font-medium text-white shadow-md">
+            Criar Primeiro Concurso
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Criar Concurso -->
+<div id="criarModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background-color: rgba(0, 0, 0, 0.5);" onclick="if(event.target === this) this.classList.add('hidden')">
+    <div class="relative w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Criar Novo Concurso</h3>
+            <button onclick="document.getElementById('criarModal').classList.add('hidden')" class="rounded-sm opacity-70 hover:opacity-100 text-gray-500 hover:text-gray-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <form method="post" action="/admin/concursos/criar" class="space-y-4">
+            <div>
+                <label for="titulo" class="block text-sm font-medium text-gray-700 mb-1">Título do Concurso</label>
+                <input type="text" id="titulo" name="titulo" required class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div>
+                <label for="premio_total" class="block text-sm font-medium text-gray-700 mb-1">Prêmio Total (R$)</label>
+                <input type="number" id="premio_total" name="premio_total" step="0.01" min="0" required class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div>
+                <label for="preco_cota" class="block text-sm font-medium text-gray-700 mb-1">Preço da Cota (R$)</label>
+                <input type="number" id="preco_cota" name="preco_cota" step="0.01" min="0" required class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div>
+                <label for="data_sorteio_prevista" class="block text-sm font-medium text-gray-700 mb-1">Data/Hora do Sorteio (Opcional)</label>
+                <input type="datetime-local" id="data_sorteio_prevista" name="data_sorteio_prevista" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div class="flex justify-end gap-2 pt-4">
+                <button type="button" onclick="document.getElementById('criarModal').classList.add('hidden')" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-violet-600 rounded-lg shadow-md hover:shadow-lg">
+                    Criar Concurso
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Editar Concurso -->
+<div id="editarModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background-color: rgba(0, 0, 0, 0.5);" onclick="if(event.target === this) this.classList.add('hidden')">
+    <div class="relative w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Editar Concurso</h3>
+            <button onclick="document.getElementById('editarModal').classList.add('hidden')" class="rounded-sm opacity-70 hover:opacity-100 text-gray-500 hover:text-gray-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <form id="editarForm" method="post" class="space-y-4">
+            <div>
+                <label for="edit_titulo" class="block text-sm font-medium text-gray-700 mb-1">Título do Concurso</label>
+                <input type="text" id="edit_titulo" name="titulo" required class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div>
+                <label for="edit_premio_total" class="block text-sm font-medium text-gray-700 mb-1">Prêmio Total (R$)</label>
+                <input type="number" id="edit_premio_total" name="premio_total" step="0.01" min="0" required class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div>
+                <label for="edit_preco_cota" class="block text-sm font-medium text-gray-700 mb-1">Preço da Cota (R$)</label>
+                <input type="number" id="edit_preco_cota" name="preco_cota" step="0.01" min="0" required class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div>
+                <label for="edit_data_sorteio_prevista" class="block text-sm font-medium text-gray-700 mb-1">Data/Hora do Sorteio (Opcional)</label>
+                <input type="datetime-local" id="edit_data_sorteio_prevista" name="data_sorteio_prevista" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div class="flex items-center">
+                <input type="checkbox" id="edit_is_active" name="is_active" class="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                <label for="edit_is_active" class="ml-2 text-sm font-medium text-gray-700">Concurso Ativo</label>
+            </div>
+            <div class="flex justify-end gap-2 pt-4">
+                <button type="button" onclick="document.getElementById('editarModal').classList.add('hidden')" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-violet-600 rounded-lg shadow-md hover:shadow-lg">
+                    Salvar Alterações
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function editarConcurso(id, titulo, premio, preco, data, isActive) {
+    document.getElementById('editarForm').action = `/admin/concursos/${id}/editar`;
+    document.getElementById('edit_titulo').value = titulo;
+    document.getElementById('edit_premio_total').value = premio;
+    document.getElementById('edit_preco_cota').value = preco;
+    document.getElementById('edit_is_active').checked = isActive;
+    
+    if (data) {
+        const date = new Date(data);
+        const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        document.getElementById('edit_data_sorteio_prevista').value = localDate.toISOString().slice(0, 16);
+    } else {
+        document.getElementById('edit_data_sorteio_prevista').value = '';
+    }
+    
+    document.getElementById('editarModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}
+

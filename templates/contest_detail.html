@@ -1,0 +1,524 @@
+{% extends "base.html" %}
+
+{% block title %}{{ concurso.titulo }} - PowerPix Admin{% endblock %}
+{% block page_title %}{{ concurso.titulo }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header com Ações -->
+    <div class="flex items-center justify-between">
+        <div>
+            <a href="/admin/concursos" class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1">
+                    <path d="M19 12H5"></path>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Voltar para Concursos
+            </a>
+            <div class="flex items-center gap-3">
+                <h1 class="text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">{{ concurso.titulo }}</h1>
+                <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium
+                    {% if concurso.status.value == 'ATIVO' %}bg-green-100 text-green-800
+                    {% elif concurso.status.value == 'SORTEADO' %}bg-blue-100 text-blue-800
+                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {{ concurso.status.value }}
+                </span>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            {% if not concurso.is_drawn and concurso.is_active %}
+            <button onclick="document.getElementById('sorteioModal').classList.remove('hidden')" class="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-md hover:shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+                    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+                    <path d="M4 22h16"></path>
+                    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
+                    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
+                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+                </svg>
+                Realizar Sorteio
+            </button>
+            {% endif %}
+            <a href="/admin/concursos/{{ concurso.id }}/exportar-csv" class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Exportar CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Resumo do Concurso -->
+    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Resumo do Concurso</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+                <p class="text-xs text-gray-500">Data de Criação</p>
+                <p class="text-sm font-medium text-gray-900">{{ concurso.data_criacao.strftime("%d/%m/%Y %H:%M") if concurso.data_criacao else "N/A" }}</p>
+            </div>
+            {% if concurso.data_sorteio_prevista %}
+            <div>
+                <p class="text-xs text-gray-500">Sorteio Previsto</p>
+                <p class="text-sm font-medium text-gray-900">{{ concurso.data_sorteio_prevista.strftime("%d/%m/%Y %H:%M") if concurso.data_sorteio_prevista else "N/A" }}</p>
+            </div>
+            {% endif %}
+            {% if concurso.data_sorteio_realizado %}
+            <div>
+                <p class="text-xs text-gray-500">Sorteio Realizado</p>
+                <p class="text-sm font-medium text-gray-900">{{ concurso.data_sorteio_realizado.strftime("%d/%m/%Y %H:%M") if concurso.data_sorteio_realizado else "N/A" }}</p>
+            </div>
+            {% endif %}
+            <div>
+                <p class="text-xs text-gray-500">Prêmio Total</p>
+                <p class="text-sm font-medium text-gray-900">R$ {{ "%.2f"|format(concurso.premio_total) }}</p>
+            </div>
+        </div>
+        
+        {% if numeros_sorteados %}
+        <div class="mt-4 pt-4 border-t border-gray-200">
+            <p class="text-xs text-gray-500 mb-2">Números Sorteados (Oficiais do Powerball)</p>
+            <div class="flex flex-wrap items-center gap-2">
+                {% if numeros_sorteados.white %}
+                    {% for numero in numeros_sorteados.white %}
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-800 text-white font-bold shadow-md">
+                        {{ "%02d"|format(numero) }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                {% if numeros_sorteados.powerball %}
+                    <span class="text-gray-400 mx-2 font-bold">+</span>
+                    <span class="text-xs text-gray-500 mr-1">Powerball:</span>
+                    {% for numero in numeros_sorteados.powerball %}
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-red-600 text-white font-bold shadow-md border-2 border-red-700">
+                        {{ "%02d"|format(numero) }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+                Formato oficial: 
+                {% if numeros_sorteados.white and numeros_sorteados.powerball %}
+                    {% for num in numeros_sorteados.white %}{{ "%02d"|format(num) }}{% if not loop.last %} – {% endif %}{% endfor %} + Powerball {{ "%02d"|format(numeros_sorteados.powerball[0]) }}
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Estatísticas -->
+    <div class="grid gap-4 md:grid-cols-5">
+        <div class="rounded-xl border border-gray-200 bg-gradient-to-br from-purple-50 to-violet-50 p-4 shadow-sm">
+            <p class="text-xs text-gray-600 mb-1">Total de Cotas</p>
+            <p class="text-2xl font-bold text-gray-900">{{ total_apostas }}</p>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-4 shadow-sm">
+            <p class="text-xs text-gray-600 mb-1">Jogadores Únicos</p>
+            <p class="text-2xl font-bold text-gray-900">{{ jogadores_unicos }}</p>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-gradient-to-br from-green-50 to-emerald-50 p-4 shadow-sm">
+            <p class="text-xs text-gray-600 mb-1">Ganhadores</p>
+            <p class="text-2xl font-bold text-gray-900">{{ total_ganhadores }}</p>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 shadow-sm">
+            <p class="text-xs text-gray-600 mb-1">Total Arrecadado</p>
+            <p class="text-2xl font-bold text-gray-900">R$ {{ "%.2f"|format(total_arrecadado) }}</p>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-gradient-to-br from-pink-50 to-rose-50 p-4 shadow-sm">
+            <p class="text-xs text-gray-600 mb-1">Prêmio Distribuído</p>
+            <p class="text-2xl font-bold text-gray-900">R$ {{ "%.2f"|format(premio_distribuido) }}</p>
+        </div>
+    </div>
+
+    <!-- Tabela de Apostas -->
+    <div class="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Análise das Apostas</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="filtroNome" placeholder="Filtrar por nome..." class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <input type="text" id="filtroTelefone" placeholder="Filtrar por telefone..." class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+            </div>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jogador</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Números</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acertos</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prêmio</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaApostas" class="bg-white divide-y divide-gray-200">
+                    {% for aposta in apostas %}
+                    <tr class="hover:bg-gray-50" data-nome="{{ aposta.usuario|lower }}" data-telefone="{{ aposta.telegram_id or '' }}">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ aposta.usuario }}</div>
+                            <div class="text-xs text-gray-500">ID: {{ aposta.telegram_id or "N/A" }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-wrap gap-1 items-center">
+                                {% for num in aposta.numeros_brancos %}
+                                <span class="inline-flex items-center justify-center h-6 w-6 rounded text-xs font-medium
+                                    {% if numeros_sorteados.white and num in numeros_sorteados.white %}bg-green-100 text-green-800 border-2 border-green-500
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ "%02d"|format(num) }}
+                                </span>
+                                {% endfor %}
+                                {% if aposta.numeros_vermelhos %}
+                                <span class="text-gray-400 mx-1 text-xs">+</span>
+                                {% for num in aposta.numeros_vermelhos %}
+                                <span class="inline-flex items-center justify-center h-6 w-6 rounded text-xs font-medium
+                                    {% if numeros_sorteados.powerball and num in numeros_sorteados.powerball %}bg-red-100 text-red-800 border-2 border-red-500
+                                    {% else %}bg-red-50 text-red-800 border border-red-300{% endif %}">
+                                    {{ "%02d"|format(num) }}
+                                </span>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if aposta.acertos == 6 %}bg-green-100 text-green-800
+                                {% elif aposta.acertos >= 4 %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ aposta.acertos }} acertos
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if aposta.is_winner %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                🎉 Ganhador
+                            </span>
+                            {% else %}
+                            <span class="text-xs text-gray-500">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {% if aposta.is_winner %}
+                            <span class="font-semibold text-green-600">R$ {{ "%.2f"|format(aposta.valor_premio) }}</span>
+                            {% else %}
+                            <span class="text-gray-400">R$ 0,00</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="verPerfil({{ aposta.telegram_id }}, '{{ aposta.usuario }}')" class="text-purple-600 hover:text-purple-900">
+                                Ver Perfil
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if not apostas %}
+        <div class="p-12 text-center">
+            <p class="text-gray-500">Nenhuma aposta registrada neste concurso</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Realizar Sorteio -->
+<div id="sorteioModal" class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto" style="background-color: rgba(0, 0, 0, 0.5); padding: 20px;" onclick="if(event.target === this) this.classList.add('hidden')">
+    <div class="relative w-full max-w-4xl rounded-xl border border-gray-200 bg-white p-6 shadow-xl my-8" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Realizar Sorteio</h3>
+            <button onclick="document.getElementById('sorteioModal').classList.add('hidden')" class="rounded-sm opacity-70 hover:opacity-100 text-gray-500 hover:text-gray-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <form method="post" action="/admin/concursos/{{ concurso.id }}/sorteio" class="space-y-4">
+            <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                <p class="font-medium mb-1">⚠️ Atenção</p>
+                <p>Você está prestes a realizar o sorteio deste concurso. Certifique-se de que os números estão corretos, pois esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="space-y-4">
+                <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                    <p class="font-medium mb-1">ℹ️ Informação</p>
+                    <p>Insira os números oficiais do sorteio Powerball: <strong>5 números brancos (1-69) + 1 Powerball (1-26)</strong></p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Números Brancos Oficiais (5 números, de 1 a 69)</label>
+                    <div class="grid grid-cols-10 gap-2 mb-2 max-h-64 overflow-y-auto p-2 border border-gray-200 rounded-lg" id="whiteNumbersGrid">
+                        <!-- Botões serão gerados via JavaScript -->
+                    </div>
+                    <p class="text-xs text-gray-500">Selecione exatamente 5 números (números oficiais do Powerball)</p>
+                    <p class="text-xs text-red-600 mt-1" id="whiteError"></p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Powerball Oficial (1 número, de 1 a 26)</label>
+                    <div class="grid grid-cols-10 gap-2 mb-2 border border-gray-200 rounded-lg p-2" id="powerballNumbersGrid">
+                        <!-- Botões serão gerados via JavaScript -->
+                    </div>
+                    <p class="text-xs text-gray-500">Selecione exatamente 1 Powerball (número oficial do Powerball)</p>
+                    <p class="text-xs text-red-600 mt-1" id="powerballError"></p>
+                </div>
+                
+                <input type="hidden" id="numeros_sorteados" name="numeros_sorteados" required>
+            </div>
+            <div class="flex justify-end gap-2 pt-4">
+                <button type="button" onclick="document.getElementById('sorteioModal').classList.add('hidden')" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Cancelar
+                </button>
+                <button type="submit" id="confirmarSorteio" class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    Confirmar Sorteio
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Ver Perfil -->
+<div id="perfilModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background-color: rgba(0, 0, 0, 0.5);" onclick="if(event.target === this) this.classList.add('hidden')">
+    <div class="relative w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Perfil do Jogador</h3>
+            <button onclick="document.getElementById('perfilModal').classList.add('hidden')" class="rounded-sm opacity-70 hover:opacity-100 text-gray-500 hover:text-gray-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div id="perfilContent" class="space-y-4">
+            <!-- Conteúdo será preenchido via JavaScript -->
+        </div>
+    </div>
+</div>
+
+<script>
+// Filtros
+document.getElementById('filtroNome')?.addEventListener('input', filtrarTabela);
+document.getElementById('filtroTelefone')?.addEventListener('input', filtrarTabela);
+
+function filtrarTabela() {
+    const filtroNome = document.getElementById('filtroNome')?.value.toLowerCase() || '';
+    const filtroTelefone = document.getElementById('filtroTelefone')?.value || '';
+    const linhas = document.querySelectorAll('#tabelaApostas tr');
+    
+    linhas.forEach(linha => {
+        const nome = linha.getAttribute('data-nome') || '';
+        const telefone = linha.getAttribute('data-telefone') || '';
+        
+        const matchNome = nome.includes(filtroNome);
+        const matchTelefone = telefone.includes(filtroTelefone);
+        
+        linha.style.display = (matchNome && matchTelefone) ? '' : 'none';
+    });
+}
+
+function verPerfil(telegramId, nome) {
+    document.getElementById('perfilContent').innerHTML = `
+        <div>
+            <p class="text-sm text-gray-500">Nome</p>
+            <p class="text-base font-medium text-gray-900">${nome}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">Telegram ID</p>
+            <p class="text-base font-medium text-gray-900">${telegramId || 'N/A'}</p>
+        </div>
+    `;
+    document.getElementById('perfilModal').classList.remove('hidden');
+}
+
+// Gerar botões de números
+function gerarBotoesNumeros() {
+    const whiteGrid = document.getElementById('whiteNumbersGrid');
+    const powerballGrid = document.getElementById('powerballNumbersGrid');
+    
+    // Gerar botões para números brancos (1-69)
+    for (let i = 1; i <= 69; i++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.onclick = () => toggleWhiteNumber(i);
+        btn.id = `white_${i}`;
+        btn.className = 'h-10 w-10 rounded-lg border-2 border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors';
+        btn.textContent = String(i).padStart(2, '0');
+        whiteGrid.appendChild(btn);
+    }
+    
+    // Gerar botões para Powerballs (1-26)
+    for (let i = 1; i <= 26; i++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.onclick = () => togglePowerball(i);
+        btn.id = `powerball_${i}`;
+        btn.className = 'h-10 w-10 rounded-lg border-2 border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors';
+        btn.textContent = String(i).padStart(2, '0');
+        powerballGrid.appendChild(btn);
+    }
+}
+
+// Executar quando o modal for aberto
+document.addEventListener('DOMContentLoaded', function() {
+    gerarBotoesNumeros();
+    
+    // Re-gerar quando o modal for aberto
+    const modal = document.getElementById('sorteioModal');
+    if (modal) {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (!mutation.target.classList.contains('hidden')) {
+                    // Modal foi aberto, garantir que os botões existem
+                    if (document.getElementById('whiteNumbersGrid').children.length === 0) {
+                        gerarBotoesNumeros();
+                    }
+                }
+            });
+        });
+        observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+    }
+});
+
+// Seleção de números para sorteio (ADMIN: 5 brancos + 1 Powerball)
+let whiteNumbersSelected = [];
+let powerballNumbersSelected = [];
+
+function toggleWhiteNumber(num) {
+    const btn = document.getElementById(`white_${num}`);
+    const index = whiteNumbersSelected.indexOf(num);
+    
+    if (index > -1) {
+        whiteNumbersSelected.splice(index, 1);
+        btn.classList.remove('bg-gray-800', 'text-white', 'border-gray-800');
+        btn.classList.add('border-gray-300', 'bg-white', 'text-gray-700');
+    } else {
+        if (whiteNumbersSelected.length < 5) {
+            whiteNumbersSelected.push(num);
+            btn.classList.remove('border-gray-300', 'bg-white', 'text-gray-700');
+            btn.classList.add('bg-gray-800', 'text-white', 'border-gray-800');
+        }
+    }
+    
+    whiteNumbersSelected.sort((a, b) => a - b);
+    updateWhiteError();
+    updateSorteioJSON();
+}
+
+function togglePowerball(num) {
+    const btn = document.getElementById(`powerball_${num}`);
+    const index = powerballNumbersSelected.indexOf(num);
+    
+    if (index > -1) {
+        powerballNumbersSelected.splice(index, 1);
+        btn.classList.remove('bg-red-600', 'text-white', 'border-red-700');
+        btn.classList.add('border-gray-300', 'bg-white', 'text-gray-700');
+    } else {
+        // Se já tem um selecionado, remover o anterior primeiro
+        if (powerballNumbersSelected.length > 0) {
+            const oldNum = powerballNumbersSelected[0];
+            const oldBtn = document.getElementById(`powerball_${oldNum}`);
+            if (oldBtn) {
+                oldBtn.classList.remove('bg-red-600', 'text-white', 'border-red-700');
+                oldBtn.classList.add('border-gray-300', 'bg-white', 'text-gray-700');
+            }
+            powerballNumbersSelected = [];
+        }
+        powerballNumbersSelected.push(num);
+        btn.classList.remove('border-gray-300', 'bg-white', 'text-gray-700');
+        btn.classList.add('bg-red-600', 'text-white', 'border-red-700');
+    }
+    
+    powerballNumbersSelected.sort((a, b) => a - b);
+    updatePowerballError();
+    updateSorteioJSON();
+}
+
+function updateWhiteError() {
+    const errorEl = document.getElementById('whiteError');
+    if (whiteNumbersSelected.length === 5) {
+        errorEl.textContent = '';
+    } else {
+        errorEl.textContent = `Selecione ${5 - whiteNumbersSelected.length} número(s) restante(s)`;
+    }
+}
+
+function updatePowerballError() {
+    const errorEl = document.getElementById('powerballError');
+    if (powerballNumbersSelected.length === 1) {
+        errorEl.textContent = '';
+    } else {
+        errorEl.textContent = powerballNumbersSelected.length === 0 ? 'Selecione 1 Powerball' : '';
+    }
+}
+
+function updateSorteioJSON() {
+    const json = JSON.stringify({
+        white: whiteNumbersSelected,
+        powerball: powerballNumbersSelected
+    });
+    document.getElementById('numeros_sorteados').value = json;
+    
+    // Habilitar/desabilitar botão de confirmar
+    const btn = document.getElementById('confirmarSorteio');
+    if (whiteNumbersSelected.length === 5 && powerballNumbersSelected.length === 1) {
+        btn.disabled = false;
+    } else {
+        btn.disabled = true;
+    }
+}
+
+// Função para limpar seleção
+function limparSelecao() {
+    whiteNumbersSelected = [];
+    powerballNumbersSelected = [];
+    // Resetar visual dos botões
+    for (let i = 1; i <= 69; i++) {
+        const btn = document.getElementById(`white_${i}`);
+        if (btn) {
+            btn.classList.remove('bg-gray-800', 'text-white', 'border-gray-800');
+            btn.classList.add('border-gray-300', 'bg-white', 'text-gray-700');
+        }
+    }
+    for (let i = 1; i <= 26; i++) {
+        const btn = document.getElementById(`powerball_${i}`);
+        if (btn) {
+            btn.classList.remove('bg-red-600', 'text-white', 'border-red-700');
+            btn.classList.add('border-gray-300', 'bg-white', 'text-gray-700');
+        }
+    }
+    updateSorteioJSON();
+    const whiteError = document.getElementById('whiteError');
+    const powerballError = document.getElementById('powerballError');
+    if (whiteError) whiteError.textContent = '';
+    if (powerballError) powerballError.textContent = '';
+}
+
+// Limpar seleção ao fechar modal
+document.getElementById('sorteioModal')?.addEventListener('click', function(e) {
+    const closeBtn = e.target.closest('button[onclick*="sorteioModal"].classList.add');
+    const cancelBtn = e.target.closest('button[type="button"]');
+    
+    if (closeBtn || (cancelBtn && cancelBtn.textContent.trim() === 'Cancelar')) {
+        limparSelecao();
+    }
+});
+
+// Limpar ao abrir modal também (para garantir estado limpo)
+const modal = document.getElementById('sorteioModal');
+if (modal) {
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (!mutation.target.classList.contains('hidden')) {
+                limparSelecao();
+            }
+        });
+    });
+    observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+}
+</script>
+{% endblock %}
+
