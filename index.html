@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PowerPix - Seleção</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #0A192F; /* Azul Marinho Profundo */
+            --accent-color: #32D74B; /* Verde Neon Pix */
+            --red-color: #E31837; /* Vermelho Powerball */
+            --text-color: #ffffff;
+            --card-bg: #112240;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            user-select: none; /* Evita zoom ao clicar rápido */
+        }
+
+        h2 { margin-top: 0; font-size: 1.2rem; text-align: center; }
+        p { font-size: 0.9rem; opacity: 0.8; text-align: center; margin-bottom: 15px; }
+
+        .section-title {
+            color: var(--accent-color);
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+
+        .red-title { color: var(--red-color); }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr); /* 7 bolinhas por linha */
+            gap: 8px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .ball {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background-color: var(--card-bg);
+            border: 1px solid #233554;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        /* Estilo da Bolinha Branca Selecionada */
+        .ball.selected-white {
+            background-color: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(50, 215, 75, 0.4);
+        }
+
+        /* Estilo da Bolinha Vermelha Selecionada */
+        .ball.selected-red {
+            background-color: var(--red-color);
+            color: #fff;
+            border-color: var(--red-color);
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(227, 24, 55, 0.4);
+        }
+
+        .counter {
+            position: fixed;
+            bottom: 80px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(5px);
+            border: 1px solid #333;
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-main {
+            background-color: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            width: 100%;
+            max-width: 350px;
+            cursor: pointer;
+            margin-top: 30px;
+            margin-bottom: 50px; /* Espaço pro scroll */
+        }
+
+        .btn-main:disabled {
+            background-color: #555;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        .btn-random {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h2>PowerPix 🍀</h2>
+    <p>Selecione 20 Números e 5 Powerballs</p>
+
+    <button class="btn-random" onclick="gerarSurpresinha()">🎲 Gerar Palpite Mágico</button>
+
+    <div class="section-title">Números (Max 20)</div>
+    <div class="grid-container" id="grid-white">
+        </div>
+
+    <div class="section-title red-title">Powerballs (Max 5)</div>
+    <div class="grid-container" id="grid-red">
+        </div>
+
+    <div class="counter">
+        <span id="count-white">⚪ 0/20</span>
+        <span id="count-red">🔴 0/5</span>
+    </div>
+
+    <button id="btn-confirmar" class="btn-main" onclick="enviarAposta()" disabled>CONFIRMAR JOGO</button>
+
+    <script>
+        // Inicializa o WebApp do Telegram
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Abre em tela cheia
+
+        // Cores do tema do Telegram (opcional, para integrar melhor)
+        document.body.style.backgroundColor = tg.themeParams.bg_color ? tg.themeParams.bg_color : '#0A192F';
+        
+        // Estado da Aplicação
+        let selectedWhite = new Set();
+        let selectedRed = new Set();
+        const MAX_WHITE = 20;
+        const MAX_RED = 5;
+
+        // Função para criar as bolinhas
+        function createGrid(containerId, maxNum, type) {
+            const container = document.getElementById(containerId);
+            for (let i = 1; i <= maxNum; i++) {
+                const ball = document.createElement('div');
+                ball.className = 'ball';
+                ball.innerText = i;
+                ball.onclick = () => toggleSelection(i, type, ball);
+                container.appendChild(ball);
+            }
+        }
+
+        // Lógica de Seleção
+        function toggleSelection(num, type, element) {
+            if (type === 'white') {
+                if (selectedWhite.has(num)) {
+                    selectedWhite.delete(num);
+                    element.classList.remove('selected-white');
+                } else {
+                    if (selectedWhite.size >= MAX_WHITE) {
+                        tg.HapticFeedback.notificationOccurred('error'); // Vibra erro
+                        return; 
+                    }
+                    selectedWhite.add(num);
+                    element.classList.add('selected-white');
+                    tg.HapticFeedback.selectionChanged(); // Vibra leve
+                }
+            } else {
+                if (selectedRed.has(num)) {
+                    selectedRed.delete(num);
+                    element.classList.remove('selected-red');
+                } else {
+                    if (selectedRed.size >= MAX_RED) {
+                        tg.HapticFeedback.notificationOccurred('error');
+                        return;
+                    }
+                    selectedRed.add(num);
+                    element.classList.add('selected-red');
+                    tg.HapticFeedback.selectionChanged();
+                }
+            }
+            updateUI();
+        }
+
+        // Atualiza contadores e botão
+        function updateUI() {
+            document.getElementById('count-white').innerText = `⚪ ${selectedWhite.size}/${MAX_WHITE}`;
+            document.getElementById('count-red').innerText = `🔴 ${selectedRed.size}/${MAX_RED}`;
+
+            const btn = document.getElementById('btn-confirmar');
+            // Só libera se preencher tudo (opcional, pode liberar antes se quiser)
+            if (selectedWhite.size === MAX_WHITE && selectedRed.size === MAX_RED) {
+                btn.disabled = false;
+                tg.MainButton.show(); // Mostra botão nativo do Telegram também
+                tg.MainButton.setText(`CONFIRMAR (${selectedWhite.size} + ${selectedRed.size})`);
+                tg.MainButton.onClick(enviarAposta);
+            } else {
+                btn.disabled = true;
+                tg.MainButton.hide();
+            }
+        }
+
+        // Função Surpresinha
+        function gerarSurpresinha() {
+            // Limpa tudo
+            document.querySelectorAll('.ball').forEach(b => b.className = 'ball');
+            selectedWhite.clear();
+            selectedRed.clear();
+
+            // Gera Brancas
+            while(selectedWhite.size < MAX_WHITE) {
+                let r = Math.floor(Math.random() * 69) + 1;
+                selectedWhite.add(r);
+            }
+
+            // Gera Vermelhas
+            while(selectedRed.size < MAX_RED) {
+                let r = Math.floor(Math.random() * 26) + 1;
+                selectedRed.add(r);
+            }
+
+            // Atualiza Visual
+            const whiteBalls = document.getElementById('grid-white').children;
+            selectedWhite.forEach(num => whiteBalls[num-1].classList.add('selected-white'));
+
+            const redBalls = document.getElementById('grid-red').children;
+            selectedRed.forEach(num => redBalls[num-1].classList.add('selected-red'));
+
+            updateUI();
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+
+        // Enviar dados para o Bot
+        function enviarAposta() {
+            const dados = {
+                white: Array.from(selectedWhite),
+                red: Array.from(selectedRed),
+                action: 'aposta_realizada'
+            };
+            
+            // Manda o JSON de volta para o Python do Bot
+            tg.sendData(JSON.stringify(dados)); 
+        }
+
+        // Inicializa as grids
+        createGrid('grid-white', 69, 'white');
+        createGrid('grid-red', 26, 'red');
+
+    </script>
+</body>
+</html>
