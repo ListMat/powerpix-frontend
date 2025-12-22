@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, desc
 from sqlalchemy.orm import selectinload
 from database import (
-    AsyncSessionLocal, Usuario, Aposta, Sorteio, StatusSorteio
+    AsyncSessionLocal, Usuario, Aposta, Sorteio, StatusSorteio, Concurso, Transacao, TipoTransacao
 )
 from pydantic import BaseModel
 from typing import List, Optional
@@ -10,7 +10,7 @@ from datetime import datetime
 import json
 import logging
 
-router = APIRouter(prefix="/player", tags=["player"])
+router = APIRouter(prefix="/api/player", tags=["player"])
 logger = logging.getLogger(__name__)
 
 
@@ -45,6 +45,55 @@ class DrawResultResponse(BaseModel):
 
 
 # ==================== Endpoints ====================
+
+class CheckRegistrationRequest(BaseModel):
+    telegram_id: int
+
+@router.post("/check-registration")
+async def check_registration(request: CheckRegistrationRequest):
+    """
+    Verifica se o usuário está cadastrado e com dados completos.
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            result = await session.execute(
+                select(Usuario).where(Usuario.telegram_id == request.telegram_id)
+            )
+            usuario = result.scalar_one_or_none()
+            
+            if not usuario:
+                return {
+                    "cadastro_completo": False,
+                    "usuario_existe": False,
+                    "mensagem": "Usuário não encontrado. Complete seu cadastro."
+                }
+            
+            # Verificar se cadastro está completo
+            cadastro_completo = (
+                usuario.cadastro_completo and
+                usuario.nome and
+                usuario.cpf and
+                usuario.pix and
+                usuario.telefone
+            )
+            
+            return {
+                "cadastro_completo": cadastro_completo,
+                "usuario_existe": True,
+                "nome": usuario.nome,
+                "tem_cpf": bool(usuario.cpf),
+                "tem_pix": bool(usuario.pix),
+                "tem_telefone": bool(usuario.telefone),
+                "mensagem": "Cadastro completo" if cadastro_completo else "Cadastro incompleto"
+            }
+        except Exception as e:
+            logger.error(f"Erro ao verificar cadastro: {e}", exc_info=True)
+            return {
+                "cadastro_completo": False,
+                "usuario_existe": False,
+                "mensagem": "Erro ao verificar cadastro"
+            }
+
 
 @router.get("/my-bets/{telegram_id}")
 async def get_my_bets(telegram_id: int, limit: int = 50):
@@ -262,4 +311,190 @@ async def get_player_stats(telegram_id: int):
         except Exception as e:
             logger.error(f"Erro ao buscar estatísticas: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail="Erro ao buscar estatísticas")
+
+
+@router.get("/history/bets/{telegram_id}")
+async def get_bet_history(telegram_id: int, limit: int = 20):
+    """
+    Retorna histórico de apostas do jogador (últimas 20 por padrão).
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            # Buscar usuário
+            result = await session.execute(
+                select(Usuario).where(Usuario.telegram_id == telegram_id)
+            )
+            usuario = result.scalar_one_or_none()
+            
+            if not usuario:
+                return {"apostas": []}
+            
+            # Buscar apostas com sorteio/concurso
+            result = await session.execute(
+                select(Aposta)
+                .options(selectinload(Aposta.sorteio), selectinload(Aposta.concurso))
+                .where(Aposta.usuario_id == usuario.id)
+                .order_by(desc(Aposta.data_aposta))
+                .limit(limit)
+            )
+            apostas = result.scalars().all()
+            
+            apostas_list = []
+            for aposta in apostas:
+                # Determinar status
+                if aposta.is_winner:
+                    status = "GANHOU"
+                    status_color = "green"
+                elif aposta.sorteio and aposta.sorteio.status == StatusSorteio.ENCERRADO:
+                    status = "PERDEU"
+                    status_color = "red"
+                elif aposta.concurso and aposta.concurso.is_drawn:
+                    status = "PERDEU"
+                    status_color = "red"
+                else:
+                    status = "AGUARDANDO"
+                    status_color = "yellow"
+                
+                # Nome do concurso/sorteio
+                concurso_nome = ""
+                if aposta.concurso:
+                    concurso_nome = aposta.concurso.titulo
+                elif aposta.sorteio:
+                    concurso_nome = f"Sorteio #{aposta.sorteio.id}"
+                else:
+                    concurso_nome = "Sorteio Antigo"
+                
+                apostas_list.append({
+                    "id": aposta.id,
+                    "numeros_brancos": aposta.numeros_brancos,
+                    "numeros_vermelhos": aposta.numeros_vermelhos,
+                    "valor_pago": aposta.valor_pago,
+                    "data_aposta": aposta.data_aposta.strftime("%d/%m/%Y %H:%M") if aposta.data_aposta else "",
+                    "status": status,
+                    "status_color": status_color,
+                    "acertos": aposta.acertos or 0,
+                    "valor_premio": aposta.valor_premio or 0.0,
+                    "concurso_nome": concurso_nome
+                })
+            
+            return {"apostas": apostas_list}
+        
+        except Exception as e:
+            logger.error(f"Erro ao buscar histórico de apostas: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Erro ao buscar histórico")
+
+
+@router.get("/history/transactions/{telegram_id}")
+async def get_transaction_history(telegram_id: int, limit: int = 20):
+    """
+    Retorna histórico de transações (depósitos, saques, apostas, prêmios).
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            # Buscar usuário
+            result = await session.execute(
+                select(Usuario).where(Usuario.telegram_id == telegram_id)
+            )
+            usuario = result.scalar_one_or_none()
+            
+            if not usuario:
+                return {"transacoes": []}
+            
+            # Buscar transações
+            result = await session.execute(
+                select(Transacao)
+                .where(Transacao.usuario_id == usuario.id)
+                .order_by(desc(Transacao.data_criacao))
+                .limit(limit)
+            )
+            transacoes = result.scalars().all()
+            
+            transacoes_list = []
+            for t in transacoes:
+                # Determinar ícone e cor
+                if t.tipo == TipoTransacao.DEPOSITO:
+                    icone = "💰"
+                    cor = "green"
+                    descricao = "Depósito PIX"
+                elif t.tipo == TipoTransacao.APOSTA:
+                    icone = "🎮"
+                    cor = "blue"
+                    descricao = "Aposta realizada"
+                elif t.tipo == TipoTransacao.PREMIO:
+                    icone = "🏆"
+                    cor = "gold"
+                    descricao = "Prêmio recebido"
+                elif t.tipo == TipoTransacao.SAQUE:
+                    icone = "💸"
+                    cor = "orange"
+                    descricao = "Saque PIX"
+                else:
+                    icone = "📝"
+                    cor = "gray"
+                    descricao = t.descricao or "Transação"
+                
+                transacoes_list.append({
+                    "id": t.id,
+                    "tipo": t.tipo.value if hasattr(t.tipo, 'value') else str(t.tipo),
+                    "valor": t.valor,
+                    "descricao": descricao,
+                    "icone": icone,
+                    "cor": cor,
+                    "data": t.data_criacao.strftime("%d/%m/%Y %H:%M") if t.data_criacao else "",
+                    "status": t.status
+                })
+            
+            return {"transacoes": transacoes_list}
+        
+        except Exception as e:
+            logger.error(f"Erro ao buscar histórico de transações: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Erro ao buscar histórico")
+
+
+@router.get("/config/bet-price")
+async def get_bet_price():
+    """
+    Retorna o preço atual da aposta.
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            # Buscar concurso ativo
+            from database import StatusConcurso
+            result = await session.execute(
+                select(Concurso)
+                .where(
+                    and_(
+                        Concurso.status == StatusConcurso.ATIVO,
+                        Concurso.is_active == True
+                    )
+                )
+                .order_by(desc(Concurso.data_criacao))
+                .limit(1)
+            )
+            concurso = result.scalar_one_or_none()
+            
+            if concurso:
+                return {
+                    "preco": concurso.preco_cota,
+                    "concurso_id": concurso.id,
+                    "concurso_nome": concurso.titulo,
+                    "premio_total": concurso.premio_total
+                }
+            
+            # Fallback: preço padrão
+            return {
+                "preco": 5.0,
+                "concurso_id": None,
+                "concurso_nome": "Próximo Sorteio",
+                "premio_total": 0.0
+            }
+        
+        except Exception as e:
+            logger.error(f"Erro ao buscar preço da aposta: {e}", exc_info=True)
+            return {
+                "preco": 5.0,
+                "concurso_id": None,
+                "concurso_nome": "Próximo Sorteio",
+                "premio_total": 0.0
+            }
 

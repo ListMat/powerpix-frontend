@@ -58,9 +58,21 @@ class Usuario(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     telegram_id = Column(BigInteger, unique=True, nullable=False, index=True)
-    nome = Column(String(255))
+    nome = Column(String(255), nullable=False)  # Obrigatório
     saldo = Column(Float, default=0.0, nullable=False)
     data_cadastro = Column(DateTime, default=datetime.utcnow)
+    
+    # Dados de cadastro obrigatórios
+    cpf = Column(String(14), nullable=True)  # CPF para pagamentos (formato: 000.000.000-00)
+    pix = Column(String(255), nullable=True)  # Chave PIX para receber prêmios
+    telefone = Column(String(20), nullable=True)  # Número de telefone
+    
+    # Dados opcionais
+    cidade = Column(String(100), nullable=True)
+    estado = Column(String(2), nullable=True)  # UF (2 caracteres)
+    
+    # Flag para verificar se cadastro está completo
+    cadastro_completo = Column(Boolean, default=False, nullable=False)
     
     apostas = relationship("Aposta", back_populates="usuario")
     transacoes = relationship("Transacao", back_populates="usuario", cascade="all, delete-orphan")
@@ -240,6 +252,37 @@ async def init_db():
             if 'acertos' not in column_names:
                 await conn.execute(text("ALTER TABLE apostas ADD COLUMN acertos INTEGER DEFAULT 0"))
                 print("✓ Coluna 'acertos' adicionada à tabela apostas")
+            
+            # Migração: Adicionar colunas de cadastro à tabela usuarios
+            result = await conn.execute(
+                text("PRAGMA table_info(usuarios)")
+            )
+            columns = result.fetchall()
+            column_names = [col[1] for col in columns]
+            
+            if 'pix' not in column_names:
+                await conn.execute(text("ALTER TABLE usuarios ADD COLUMN pix VARCHAR(255)"))
+                print("✓ Coluna 'pix' adicionada à tabela usuarios")
+            
+            if 'telefone' not in column_names:
+                await conn.execute(text("ALTER TABLE usuarios ADD COLUMN telefone VARCHAR(20)"))
+                print("✓ Coluna 'telefone' adicionada à tabela usuarios")
+            
+            if 'cidade' not in column_names:
+                await conn.execute(text("ALTER TABLE usuarios ADD COLUMN cidade VARCHAR(100)"))
+                print("✓ Coluna 'cidade' adicionada à tabela usuarios")
+            
+            if 'estado' not in column_names:
+                await conn.execute(text("ALTER TABLE usuarios ADD COLUMN estado VARCHAR(2)"))
+                print("✓ Coluna 'estado' adicionada à tabela usuarios")
+            
+            if 'cadastro_completo' not in column_names:
+                await conn.execute(text("ALTER TABLE usuarios ADD COLUMN cadastro_completo BOOLEAN DEFAULT 0"))
+                print("✓ Coluna 'cadastro_completo' adicionada à tabela usuarios")
+            
+            if 'cpf' not in column_names:
+                await conn.execute(text("ALTER TABLE usuarios ADD COLUMN cpf VARCHAR(14)"))
+                print("✓ Coluna 'cpf' adicionada à tabela usuarios")
         except Exception as e:
             print(f"⚠ Aviso ao verificar/adicionar colunas: {e}")
     

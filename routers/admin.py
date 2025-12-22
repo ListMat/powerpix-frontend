@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from fastapi.templating import Jinja2Templates
 import csv
 from io import StringIO
 from sqlalchemy import select, func
@@ -14,11 +13,13 @@ from database import (
     AsyncSessionLocal, Usuario, Sorteio, Aposta, Admin, StatusSorteio, SystemConfig, 
     Concurso, Promocao, StatusConcurso, TipoPromocao, get_db
 )
+from schemas import DrawNumbersSchema
+from pydantic import ValidationError
 from config import get_settings
 from typing import Optional
+from template_config import templates  # Importar templates compartilhado
 
 settings = get_settings()
-templates = Jinja2Templates(directory="templates")
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -121,7 +122,17 @@ async def dashboard(
     db: AsyncSession = Depends(get_db)
 ):
     """Dashboard principal"""
-    # Buscar sorteio atual
+    # Buscar concurso ativo (prioridade) ou sorteio (compatibilidade)
+    result = await db.execute(
+        select(Concurso).where(
+            Concurso.is_active == True,
+            Concurso.status == StatusConcurso.ATIVO,
+            Concurso.is_drawn == False
+        ).order_by(Concurso.data_criacao.desc())
+    )
+    concurso_atual = result.scalar_one_or_none()
+    
+    # Fallback para Sorteio (compatibilidade)
     result = await db.execute(
         select(Sorteio).where(Sorteio.status == StatusSorteio.ABERTO)
     )
@@ -135,7 +146,17 @@ async def dashboard(
     taxa_inicial = 0.3
     taxa_pos_meta = 0.9
     
-    if sorteio_atual:
+    if concurso_atual:
+        # Somar valor_pago de todas as apostas do concurso
+        result = await db.execute(
+            select(func.sum(Aposta.valor_pago))
+            .where(Aposta.concurso_id == concurso_atual.id)
+        )
+        arrecadacao = result.scalar() or 0.0
+        fundo_premios = concurso_atual.premio_total
+        # Para concursos, o lucro é calculado como: arrecadacao - premio_total
+        lucro_casa = max(0.0, arrecadacao - fundo_premios)
+    elif sorteio_atual:
         # Somar valor_pago de todas as apostas do sorteio
         result = await db.execute(
             select(func.sum(Aposta.valor_pago))
@@ -155,14 +176,31 @@ async def dashboard(
         
         fundo_premios = arrecadacao - lucro_casa
     
-    # Buscar últimas apostas
-    result = await db.execute(
-        select(Aposta)
-        .options(selectinload(Aposta.usuario))
-        .where(Aposta.sorteio_id == sorteio_atual.id if sorteio_atual else None)
-        .order_by(Aposta.data_aposta.desc())
-        .limit(20)
-    )
+    # Buscar últimas apostas (de Concurso ou Sorteio)
+    if concurso_atual:
+        result = await db.execute(
+            select(Aposta)
+            .options(selectinload(Aposta.usuario))
+            .where(Aposta.concurso_id == concurso_atual.id)
+            .order_by(Aposta.data_aposta.desc())
+            .limit(20)
+        )
+    elif sorteio_atual:
+        result = await db.execute(
+            select(Aposta)
+            .options(selectinload(Aposta.usuario))
+            .where(Aposta.sorteio_id == sorteio_atual.id)
+            .order_by(Aposta.data_aposta.desc())
+            .limit(20)
+        )
+    else:
+        # Se não houver concurso nem sorteio, buscar últimas apostas gerais
+        result = await db.execute(
+            select(Aposta)
+            .options(selectinload(Aposta.usuario))
+            .order_by(Aposta.data_aposta.desc())
+            .limit(20)
+        )
     apostas = result.scalars().all()
     
     # Formatar apostas para template
@@ -188,6 +226,7 @@ async def dashboard(
         "dashboard.html",
         {
             "request": request,
+            "concurso_atual": concurso_atual,
             "sorteio_atual": sorteio_atual,
             "arrecadacao": arrecadacao,
             "lucro_casa": lucro_casa,
@@ -246,34 +285,22 @@ async def encerrar_sorteio(
         raise HTTPException(status_code=404, detail="Nenhum sorteio aberto encontrado")
     
     # Validar e salvar números sorteados
+    # Validar e salvar números sorteados
     try:
-        # Validar formato: {"white": [5 números oficiais], "powerball": [1 número oficial]}
-        numeros_data = json.loads(numeros_sorteados)
+        # Validar formato com Pydantic
+        # O formulário envia uma string JSON, então primeiro decodificamos
+        try:
+             numeros_raw = json.loads(numeros_sorteados)
+        except json.JSONDecodeError:
+             raise ValueError("Formato de números inválido (deve ser JSON)")
+
+        validated_data = DrawNumbersSchema(**numeros_raw)
         
-        if not isinstance(numeros_data, dict):
-            raise ValueError("Formato inválido. Deve ser um objeto JSON com 'white' e 'powerball'")
-        
-        white = numeros_data.get("white", [])
-        powerball = numeros_data.get("powerball", [])
-        
-        if not isinstance(white, list) or len(white) != 5:
-            raise ValueError("Deve fornecer exatamente 5 números brancos oficiais do Powerball")
-        
-        if not isinstance(powerball, list) or len(powerball) != 1:
-            raise ValueError("Deve fornecer exatamente 1 Powerball oficial")
-        
-        # Validar intervalos
-        for num in white:
-            if not isinstance(num, int) or num < 1 or num > 69:
-                raise ValueError(f"Número branco inválido: {num}. Deve estar entre 1 e 69")
-        
-        for num in powerball:
-            if not isinstance(num, int) or num < 1 or num > 26:
-                raise ValueError(f"Powerball inválido: {num}. Deve estar entre 1 e 26")
-        
-        sorteio.numeros_sorteados = numeros_sorteados
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Formato de números inválido (deve ser JSON)")
+        # Se chegou aqui, está validado. Salvamos o JSON original ou o dump do modelo
+        sorteio.numeros_sorteados = validated_data.model_dump_json()
+
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=f"Erro de validação: {e.errors()}")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     
@@ -702,32 +729,18 @@ async def realizar_sorteio(
         raise HTTPException(status_code=400, detail="Este concurso não está ativo")
     
     try:
-        # Validar e salvar números sorteados
-        numeros_data = json.loads(numeros_sorteados)
+        # Validar e salvar números sorteados com Pydantic
+        try:
+            numeros_raw = json.loads(numeros_sorteados)
+        except json.JSONDecodeError:
+            raise ValueError("Formato de números inválido não é um JSON válido")
+
+        validated_data = DrawNumbersSchema(**numeros_raw)
         
-        # Validar formato: {"white": [5 números oficiais], "powerball": [1 número oficial]}
-        if not isinstance(numeros_data, dict):
-            raise ValueError("Formato inválido. Deve ser um objeto JSON com 'white' e 'powerball'")
-        
-        white = numeros_data.get("white", [])
-        powerball = numeros_data.get("powerball", [])
-        
-        if not isinstance(white, list) or len(white) != 5:
-            raise ValueError("Deve fornecer exatamente 5 números brancos oficiais do Powerball")
-        
-        if not isinstance(powerball, list) or len(powerball) != 1:
-            raise ValueError("Deve fornecer exatamente 1 Powerball oficial")
-        
-        # Validar intervalos
-        for num in white:
-            if not isinstance(num, int) or num < 1 or num > 69:
-                raise ValueError(f"Número branco inválido: {num}. Deve estar entre 1 e 69")
-        
-        for num in powerball:
-            if not isinstance(num, int) or num < 1 or num > 26:
-                raise ValueError(f"Powerball inválido: {num}. Deve estar entre 1 e 26")
-        
-        concurso.numeros_sorteados = numeros_sorteados
+        white = validated_data.white
+        powerball = validated_data.powerball
+
+        concurso.numeros_sorteados = validated_data.model_dump_json()
         concurso.is_drawn = True
         concurso.is_active = False
         concurso.status = StatusConcurso.SORTEADO
@@ -877,4 +890,28 @@ async def exportar_csv(
             "Content-Disposition": f"attachment; filename=concurso_{concurso_id}_apostas.csv"
         }
     )
+
+
+@router.get("/api/powerball-result")
+async def get_official_powerball_result(
+    admin: Admin = Depends(get_current_admin)
+):
+    """Busca o resultado oficial mais recente da Powerball"""
+    from services.powerball_results import powerball_service
+    
+    result = await powerball_service.get_latest_result()
+    next_draw = await powerball_service.get_next_drawing()
+    
+    if not result:
+        # Retornar dados simulados em caso de falha (para teste)
+        return {
+            "success": False,
+            "message": "Não foi possível buscar o resultado oficial. Tente novamente mais tarde."
+        }
+        
+    return {
+        "success": True,
+        "data": result,
+        "next_draw": next_draw
+    }
 

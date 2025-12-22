@@ -19,7 +19,7 @@
                 </div>
             </div>
             <div class="space-y-1">
-                <div class="text-3xl font-bold text-gray-900">R$ {{ "%.2f"|format(arrecadacao) }}</div>
+                <div class="text-3xl font-bold text-gray-900">{{ arrecadacao|currency }}</div>
                 <p class="text-xs text-gray-500">Sorteio atual</p>
             </div>
         </div>
@@ -35,12 +35,12 @@
                 </div>
             </div>
             <div class="space-y-1">
-                <div class="text-3xl font-bold text-gray-900">R$ {{ "%.2f"|format(lucro_casa) }}</div>
+                <div class="text-3xl font-bold text-gray-900">{{ lucro_casa|currency }}</div>
                 <p class="text-xs text-muted-foreground">
                     {% if arrecadacao <= meta_arrecadacao %}
-                        {{ (taxa_inicial * 100)|int }}% sobre total (R$ {{ "%.2f"|format(arrecadacao * taxa_inicial) }})
+                        {{ (taxa_inicial * 100)|int }}% sobre total ({{ (arrecadacao * taxa_inicial)|currency }})
                     {% else %}
-                        {{ (taxa_inicial * 100)|int }}% até meta (R$ {{ "%.2f"|format(meta_arrecadacao * taxa_inicial) }}) + {{ (taxa_pos_meta * 100)|int }}% excedente (R$ {{ "%.2f"|format((arrecadacao - meta_arrecadacao) * taxa_pos_meta) }})
+                        {{ (taxa_inicial * 100)|int }}% até meta ({{ (meta_arrecadacao * taxa_inicial)|currency }}) + {{ (taxa_pos_meta * 100)|int }}% excedente ({{ ((arrecadacao - meta_arrecadacao) * taxa_pos_meta)|currency }})
                     {% endif %}
                 </p>
             </div>
@@ -62,7 +62,7 @@
                 </div>
             </div>
             <div class="space-y-1">
-                <div class="text-3xl font-bold text-gray-900">R$ {{ "%.2f"|format(fundo_premios) }}</div>
+                <div class="text-3xl font-bold text-gray-900">{{ fundo_premios|currency }}</div>
                 <p class="text-xs text-gray-500">Disponível para pagamento</p>
             </div>
         </div>
@@ -79,13 +79,13 @@
                 </div>
             </div>
             <div class="space-y-1">
-                <div class="text-3xl font-bold text-gray-900">R$ {{ "%.2f"|format(meta_arrecadacao) }}</div>
+                <div class="text-3xl font-bold text-gray-900">{{ meta_arrecadacao|currency }}</div>
                 {% if arrecadacao < meta_arrecadacao %}
                     <div class="mt-2 space-y-1">
                         <div class="h-2 w-full overflow-hidden rounded-full bg-secondary">
                             <div class="h-full bg-amber-600 transition-all" style="width: {{ (arrecadacao / meta_arrecadacao * 100)|round }}%"></div>
                         </div>
-                        <p class="text-xs text-muted-foreground">Faltam R$ {{ "%.2f"|format(meta_arrecadacao - arrecadacao) }}</p>
+                        <p class="text-xs text-muted-foreground">Faltam {{ (meta_arrecadacao - arrecadacao)|currency }}</p>
                     </div>
                 {% else %}
                     <p class="text-xs text-green-600 font-medium">Meta atingida! 🎉</p>
@@ -192,7 +192,7 @@
                                 {{ aposta.numeros_vermelhos|join(', ') }}
                             </span>
                         </td>
-                        <td class="p-4 align-middle text-sm font-semibold">R$ {{ "%.2f"|format(aposta.valor) }}</td>
+                        <td class="p-4 align-middle text-sm font-semibold">{{ aposta.valor|currency }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

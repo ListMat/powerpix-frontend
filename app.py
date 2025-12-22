@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 import logging
 from contextlib import asynccontextmanager
 
 from database import init_db
+from template_config import templates  # Importar templates configurado
 from routers import bot, webapp, admin, api, finance, player
 from config import get_settings
 
@@ -56,9 +56,6 @@ app = FastAPI(
     description="Sistema de Loteria - Telegram Mini App + Admin Dashboard",
     lifespan=lifespan
 )
-
-# Configurar templates
-templates = Jinja2Templates(directory="templates")
 
 # Montar arquivos estáticos
 app.mount("/static", StaticFiles(directory="static"), name="static")

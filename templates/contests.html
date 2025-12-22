@@ -47,11 +47,11 @@
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                         <div>
                             <p class="text-xs text-gray-500">Prêmio Total</p>
-                            <p class="text-lg font-semibold text-gray-900">R$ {{ "%.2f"|format(c.premio_total) }}</p>
+                            <p class="text-lg font-semibold text-gray-900">{{ c.premio_total|currency }}</p>
                         </div>
                         <div>
                             <p class="text-xs text-gray-500">Preço da Cota</p>
-                            <p class="text-lg font-semibold text-gray-900">R$ {{ "%.2f"|format(c.preco_cota) }}</p>
+                            <p class="text-lg font-semibold text-gray-900">{{ c.preco_cota|currency }}</p>
                         </div>
                         <div>
                             <p class="text-xs text-gray-500">Total de Apostas</p>
@@ -59,7 +59,7 @@
                         </div>
                         <div>
                             <p class="text-xs text-gray-500">Arrecadado</p>
-                            <p class="text-lg font-semibold text-gray-900">R$ {{ "%.2f"|format(item.total_arrecadado) }}</p>
+                            <p class="text-lg font-semibold text-gray-900">{{ item.total_arrecadado|currency }}</p>
                         </div>
                     </div>
                     

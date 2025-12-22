@@ -70,14 +70,26 @@ async def create_deposit(deposit: DepositRequest):
             if not usuario:
                 raise HTTPException(status_code=404, detail="Usuário não encontrado")
             
+            # Verificar se usuário tem CPF cadastrado
+            if not usuario.cpf:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="CPF não cadastrado. Complete seu cadastro no Mini App."
+                )
+            
             # Buscar ou criar cliente no Asaas
             asaas_customer = await asaas_service.get_customer_by_external_reference(
                 str(deposit.telegram_id)
             )
             
             if not asaas_customer:
+                # Remover formatação do CPF (apenas números)
+                cpf_limpo = usuario.cpf.replace(".", "").replace("-", "")
+                
                 asaas_customer = await asaas_service.create_customer(
                     name=usuario.nome,
+                    cpf_cnpj=cpf_limpo,
+                    phone=usuario.telefone.replace("(", "").replace(")", "").replace(" ", "").replace("-", "") if usuario.telefone else None,
                     external_reference=str(deposit.telegram_id)
                 )
             

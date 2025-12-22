@@ -6,7 +6,7 @@ import json
 import logging
 from database import (
     AsyncSessionLocal, Usuario, Sorteio, Aposta, StatusSorteio, SystemConfig, 
-    Transacao, TipoTransacao, StatusTransacao
+    Transacao, TipoTransacao, StatusTransacao, Concurso, StatusConcurso
 )
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -27,24 +27,33 @@ async def cmd_start(message: types.Message):
     """Handler do comando /start"""
     webapp_url = f"{settings.WEBHOOK_URL}/webapp" if settings.WEBHOOK_URL else "https://seu-dominio.com/webapp"
     
-    # Buscar ou criar usuário
+    # Verificar se usuário existe e está cadastrado
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Usuario).where(Usuario.telegram_id == message.from_user.id)
         )
         usuario = result.scalar_one_or_none()
         
-        if not usuario:
-            nome = f"{message.from_user.first_name or ''} {message.from_user.last_name or ''}".strip()
-            if not nome:
-                nome = message.from_user.username or f"User_{message.from_user.id}"
-            
-            usuario = Usuario(
-                telegram_id=message.from_user.id,
-                nome=nome
+        # Não criar usuário automaticamente - deve se cadastrar pelo Mini App
+        if not usuario or not usuario.cadastro_completo:
+            await message.answer(
+                "👋 Bem-vindo ao PowerPix!\n\n"
+                "📝 Para começar, você precisa completar seu cadastro.\n\n"
+                "Clique no botão abaixo para abrir o Mini App e fazer seu cadastro:"
             )
-            session.add(usuario)
-            await session.commit()
+            # Mostrar botão do Mini App mesmo sem cadastro completo
+            keyboard = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="📝 Fazer Cadastro",
+                            web_app=WebAppInfo(url=webapp_url)
+                        )
+                    ]
+                ]
+            )
+            await message.answer("Clique no botão para começar:", reply_markup=keyboard)
+            return
     
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -124,10 +133,10 @@ async def cmd_meus_jogos(message: types.Message):
             await message.answer("❌ Usuário não encontrado. Use /start primeiro.")
             return
         
-        # Buscar apostas recentes
+        # Buscar apostas recentes (incluindo relacionamentos com Concurso e Sorteio)
         result = await session.execute(
             select(Aposta)
-            .options(selectinload(Aposta.sorteio))
+            .options(selectinload(Aposta.sorteio), selectinload(Aposta.concurso))
             .where(Aposta.usuario_id == usuario.id)
             .order_by(Aposta.data_aposta.desc())
             .limit(10)
@@ -147,7 +156,16 @@ async def cmd_meus_jogos(message: types.Message):
             brancos = json.loads(aposta.numeros_brancos)
             vermelhos = json.loads(aposta.numeros_vermelhos)
             
-            if aposta.sorteio:
+            # Verificar status baseado em Concurso (prioridade) ou Sorteio
+            if aposta.concurso:
+                if aposta.concurso.is_drawn:
+                    if aposta.is_winner:
+                        status = f"🟢 Ganhou R$ {aposta.valor_premio:.2f}"
+                    else:
+                        status = "🔴 Não ganhou"
+                else:
+                    status = f"🟡 Aguardando - {aposta.concurso.titulo}"
+            elif aposta.sorteio:
                 if aposta.sorteio.status == StatusSorteio.ABERTO:
                     status = "🟡 Aguardando sorteio"
                 elif aposta.is_winner:
@@ -175,8 +193,15 @@ async def handle_web_app_data(message: types.Message):
         data_str = message.web_app_data.data
         data = json.loads(data_str)
         
-        # Validar estrutura
-        if data.get("action") != "aposta_realizada":
+        action = data.get("action")
+        
+        # Handler para cadastro de usuário
+        if action == "cadastro_usuario":
+            await handle_cadastro_usuario(message, data)
+            return
+        
+        # Handler para aposta
+        if action != "aposta_realizada":
             await message.answer("❌ Erro: Ação inválida.")
             return
         
@@ -188,36 +213,55 @@ async def handle_web_app_data(message: types.Message):
             return
         
         async with AsyncSessionLocal() as session:
-            # Buscar sorteio atual (ABERTO)
+            # Buscar concurso ativo (prioridade: Concurso > Sorteio para compatibilidade)
             result = await session.execute(
-                select(Sorteio).where(Sorteio.status == StatusSorteio.ABERTO)
+                select(Concurso).where(
+                    Concurso.is_active == True,
+                    Concurso.status == StatusConcurso.ATIVO,
+                    Concurso.is_drawn == False
+                ).order_by(Concurso.data_criacao.desc())
             )
-            sorteio_atual = result.scalar_one_or_none()
+            concurso_atual = result.scalar_one_or_none()
             
-            if not sorteio_atual:
-                await message.answer(
-                    "❌ Não há sorteio aberto no momento. "
-                    "Aguarde a abertura de um novo sorteio."
+            # Fallback para Sorteio (compatibilidade com sistema antigo)
+            if not concurso_atual:
+                result = await session.execute(
+                    select(Sorteio).where(Sorteio.status == StatusSorteio.ABERTO)
                 )
-                return
+                sorteio_atual = result.scalar_one_or_none()
+                
+                if not sorteio_atual:
+                    await message.answer(
+                        "❌ Não há concurso aberto no momento. "
+                        "Aguarde a abertura de um novo concurso."
+                    )
+                    return
             
-            # Buscar ou criar usuário
+            # Buscar usuário
             result = await session.execute(
                 select(Usuario).where(Usuario.telegram_id == message.from_user.id)
             )
             usuario = result.scalar_one_or_none()
             
             if not usuario:
-                nome = f"{message.from_user.first_name or ''} {message.from_user.last_name or ''}".strip()
-                if not nome:
-                    nome = message.from_user.username or f"User_{message.from_user.id}"
-                
-                usuario = Usuario(
-                    telegram_id=message.from_user.id,
-                    nome=nome
+                await message.answer(
+                    "❌ Você precisa se cadastrar primeiro!\n\n"
+                    "Por favor, complete seu cadastro no Mini App antes de fazer apostas."
                 )
-                session.add(usuario)
-                await session.flush()
+                return
+            
+            # Verificar se cadastro está completo
+            if not usuario.cadastro_completo or not usuario.cpf or not usuario.pix or not usuario.telefone:
+                await message.answer(
+                    "❌ Seu cadastro está incompleto!\n\n"
+                    "Por favor, complete seu cadastro no Mini App com:\n"
+                    "• Nome completo\n"
+                    "• CPF\n"
+                    "• Chave PIX\n"
+                    "• Telefone\n\n"
+                    "Esses dados são necessários para depósitos e receber prêmios."
+                )
+                return
             
             # Calcular preço da aposta
             valor_aposta = data.get("valor_pago")
@@ -260,19 +304,25 @@ async def handle_web_app_data(message: types.Message):
             usuario.saldo -= valor_aposta
             
             # Registrar transação de aposta
+            if concurso_atual:
+                descricao_transacao = f"Aposta no concurso #{concurso_atual.id} - {concurso_atual.titulo}"
+            else:
+                descricao_transacao = f"Aposta no sorteio #{sorteio_atual.id}"
+            
             transacao = Transacao(
                 usuario_id=usuario.id,
                 tipo=TipoTransacao.APOSTA,
                 valor=valor_aposta,
                 status=StatusTransacao.PAGO,
-                descricao=f"Aposta no sorteio #{sorteio_atual.id}"
+                descricao=descricao_transacao
             )
             session.add(transacao)
             
-            # Criar aposta
+            # Criar aposta (usar Concurso se disponível, senão usar Sorteio)
             aposta = Aposta(
                 usuario_id=usuario.id,
-                sorteio_id=sorteio_atual.id,
+                concurso_id=concurso_atual.id if concurso_atual else None,
+                sorteio_id=sorteio_atual.id if not concurso_atual and sorteio_atual else None,
                 numeros_brancos=json.dumps(white_numbers),
                 numeros_vermelhos=json.dumps(red_numbers),
                 valor_pago=valor_aposta
@@ -297,6 +347,68 @@ async def handle_web_app_data(message: types.Message):
     except Exception as e:
         await message.answer("❌ Ocorreu um erro ao processar sua aposta. Tente novamente.")
         logger.error(f"Erro ao processar aposta: {e}", exc_info=True)
+
+
+async def handle_cadastro_usuario(message: types.Message, data: dict):
+    """Handler para processar cadastro de usuário"""
+    try:
+        nome = data.get("nome", "").strip()
+        cpf = data.get("cpf", "").strip()
+        pix = data.get("pix", "").strip()
+        telefone = data.get("telefone", "").strip()
+        cidade = data.get("cidade", "").strip() or None
+        estado = data.get("estado", "").strip() or None
+        
+        # Validações
+        if not nome or not cpf or not pix or not telefone:
+            await message.answer("❌ Erro: Nome, CPF, PIX e Telefone são obrigatórios.")
+            return
+        
+        async with AsyncSessionLocal() as session:
+            # Buscar usuário existente
+            result = await session.execute(
+                select(Usuario).where(Usuario.telegram_id == message.from_user.id)
+            )
+            usuario = result.scalar_one_or_none()
+            
+            if not usuario:
+                # Criar novo usuário
+                usuario = Usuario(
+                    telegram_id=message.from_user.id,
+                    nome=nome,
+                    cpf=cpf,
+                    pix=pix,
+                    telefone=telefone,
+                    cidade=cidade,
+                    estado=estado,
+                    cadastro_completo=True
+                )
+                session.add(usuario)
+            else:
+                # Atualizar dados do usuário existente
+                usuario.nome = nome
+                usuario.cpf = cpf
+                usuario.pix = pix
+                usuario.telefone = telefone
+                usuario.cidade = cidade
+                usuario.estado = estado
+                usuario.cadastro_completo = True
+            
+            await session.commit()
+            
+            await message.answer(
+                f"✅ Cadastro realizado com sucesso!\n\n"
+                f"👤 Nome: {nome}\n"
+                f"📄 CPF: {cpf}\n"
+                f"📱 Telefone: {telefone}\n"
+                f"💰 PIX: {pix}\n\n"
+                f"Agora você pode fazer depósitos e apostas! 🎲"
+            )
+            logger.info(f"Usuário {message.from_user.id} cadastrado/atualizado com sucesso")
+            
+    except Exception as e:
+        await message.answer("❌ Ocorreu um erro ao processar seu cadastro. Tente novamente.")
+        logger.error(f"Erro ao processar cadastro: {e}", exc_info=True)
 
 
 @router.post("/webhook/{token}")

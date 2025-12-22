@@ -72,7 +72,7 @@
             {% endif %}
             <div>
                 <p class="text-xs text-gray-500">Prêmio Total</p>
-                <p class="text-sm font-medium text-gray-900">R$ {{ "%.2f"|format(concurso.premio_total) }}</p>
+                <p class="text-sm font-medium text-gray-900">{{ concurso.premio_total|currency }}</p>
             </div>
         </div>
         
@@ -123,11 +123,11 @@
         </div>
         <div class="rounded-xl border border-gray-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 shadow-sm">
             <p class="text-xs text-gray-600 mb-1">Total Arrecadado</p>
-            <p class="text-2xl font-bold text-gray-900">R$ {{ "%.2f"|format(total_arrecadado) }}</p>
+            <p class="text-2xl font-bold text-gray-900">{{ total_arrecadado|currency }}</p>
         </div>
         <div class="rounded-xl border border-gray-200 bg-gradient-to-br from-pink-50 to-rose-50 p-4 shadow-sm">
             <p class="text-xs text-gray-600 mb-1">Prêmio Distribuído</p>
-            <p class="text-2xl font-bold text-gray-900">R$ {{ "%.2f"|format(premio_distribuido) }}</p>
+            <p class="text-2xl font-bold text-gray-900">{{ premio_distribuido|currency }}</p>
         </div>
     </div>
 
@@ -202,7 +202,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {% if aposta.is_winner %}
-                            <span class="font-semibold text-green-600">R$ {{ "%.2f"|format(aposta.valor_premio) }}</span>
+                            <span class="font-semibold text-green-600">{{ aposta.valor_premio|currency }}</span>
                             {% else %}
                             <span class="text-gray-400">R$ 0,00</span>
                             {% endif %}
@@ -238,6 +238,20 @@
                 </svg>
             </button>
         </div>
+        
+        <!-- Botão Buscar Resultado Oficial -->
+        <div class="mb-6">
+            <button type="button" onclick="buscarResultadoOficial()" id="btnBuscarResultado" class="w-full flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+                Buscar Resultado Oficial (Powerball.com)
+            </button>
+            <p class="text-xs text-center text-gray-500 mt-1" id="msgResultado"></p>
+        </div>
+
         <form method="post" action="/admin/concursos/{{ concurso.id }}/sorteio" class="space-y-4">
             <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                 <p class="font-medium mb-1">⚠️ Atenção</p>
@@ -382,6 +396,68 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
     }
 });
+
+// Função para buscar resultado oficial
+async function buscarResultadoOficial() {
+    const btn = document.getElementById('btnBuscarResultado');
+    const msg = document.getElementById('msgResultado');
+    
+    // Estado de loading
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg> Buscando...`;
+    btn.disabled = true;
+    msg.textContent = "";
+    
+    try {
+        const response = await fetch('/admin/api/powerball-result');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            limparSelecao();
+            
+            // Preencher números brancos
+            for (const num of result.data.white) {
+                toggleWhiteNumber(num);
+            }
+            
+            // Preencher powerball
+            if (result.data.powerball && result.data.powerball.length > 0) {
+                togglePowerball(result.data.powerball[0]);
+            }
+            
+            let msgText = `✅ Resultado obtido: ${result.data.data}`;
+            
+            // Informações sobre o próximo sorteio
+            if (result.next_draw && result.next_draw.date) {
+                const nextDate = new Date(result.next_draw.date);
+                // Adicionar hora do sorteio (22:59 ET) - Aproximando para exibição
+                // No Brasil seria dia seguinte de madrugada
+                
+                const dataFormatada = nextDate.toLocaleDateString('pt-BR');
+                const jackpot = result.next_draw.jackpot ? `(Prêmio: ${result.next_draw.jackpot})` : '';
+                
+                msgText += `<br><span class="text-blue-600">📅 Próximo Sorteio Oficial: <strong>${dataFormatada}</strong> ${jackpot}</span>`;
+                msgText += `<br><span class="text-amber-600">⚠️ Sugestão de encerramento: <strong>${dataFormatada} às 22:00</strong> (1h antes)</span>`;
+            }
+            
+            msg.innerHTML = msgText;
+            msg.className = "text-xs text-center text-green-600 mt-2 font-medium bg-green-50 p-2 rounded border border-green-100";
+        } else {
+            msg.textContent = `❌ ${result.message || 'Erro ao buscar resultado'}`;
+            msg.className = "text-xs text-center text-red-600 mt-1";
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        msg.textContent = "❌ Erro de conexão ao buscar resultado";
+        msg.className = "text-xs text-center text-red-600 mt-1";
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
 
 // Seleção de números para sorteio (ADMIN: 5 brancos + 1 Powerball)
 let whiteNumbersSelected = [];
