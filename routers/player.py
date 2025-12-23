@@ -9,6 +9,7 @@ from typing import List, Optional
 from datetime import datetime
 import json
 import logging
+from pydantic import BaseModel as PydanticBaseModel
 
 router = APIRouter(prefix="/api/player", tags=["player"])
 logger = logging.getLogger(__name__)
@@ -48,6 +49,88 @@ class DrawResultResponse(BaseModel):
 
 class CheckRegistrationRequest(BaseModel):
     telegram_id: int
+
+
+class LoginRequest(BaseModel):
+    cpf: str
+    telefone: str
+
+
+class LoginResponse(BaseModel):
+    success: bool
+    telegram_id: int
+    nome: str
+    cadastro_completo: bool
+    message: str
+
+
+@router.post("/login", response_model=LoginResponse)
+async def login(request: LoginRequest):
+    """
+    Login do usuário usando CPF e telefone.
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            # Limpar formatação
+            cpf_limpo = request.cpf.replace(".", "").replace("-", "").strip()
+            telefone_limpo = request.telefone.replace("(", "").replace(")", "").replace(" ", "").replace("-", "").strip()
+            
+            # Buscar usuário por CPF e telefone
+            result = await session.execute(
+                select(Usuario).where(
+                    Usuario.cpf == cpf_limpo,
+                    Usuario.telefone == telefone_limpo
+                )
+            )
+            usuario = result.scalar_one_or_none()
+            
+            if not usuario:
+                return LoginResponse(
+                    success=False,
+                    telegram_id=0,
+                    nome="",
+                    cadastro_completo=False,
+                    message="CPF ou telefone inválidos"
+                )
+            
+            # Verificar se conta está arquivada
+            if usuario.is_archived:
+                return LoginResponse(
+                    success=False,
+                    telegram_id=0,
+                    nome=usuario.nome or "",
+                    cadastro_completo=usuario.cadastro_completo or False,
+                    message="Sua conta foi arquivada. Entre em contato com o administrador para reativá-la."
+                )
+            
+            # Verificar se tem telegram_id (está vinculado ao Telegram)
+            if not usuario.telegram_id:
+                return LoginResponse(
+                    success=False,
+                    telegram_id=0,
+                    nome=usuario.nome or "",
+                    cadastro_completo=usuario.cadastro_completo or False,
+                    message="Usuário não vinculado ao Telegram. Acesse pelo bot primeiro."
+                )
+            
+            return LoginResponse(
+                success=True,
+                telegram_id=usuario.telegram_id,
+                nome=usuario.nome or "",
+                cadastro_completo=usuario.cadastro_completo or False,
+                message="Login realizado com sucesso"
+            )
+            
+        except Exception as e:
+            logger.error(f"Erro ao fazer login: {e}", exc_info=True)
+            return LoginResponse(
+                success=False,
+                telegram_id=0,
+                nome="",
+                cadastro_completo=False,
+                message="Erro ao processar login"
+            )
+
 
 @router.post("/check-registration")
 async def check_registration(request: CheckRegistrationRequest):
@@ -477,16 +560,18 @@ async def get_bet_price():
                 return {
                     "preco": concurso.preco_cota,
                     "concurso_id": concurso.id,
-                    "concurso_nome": concurso.titulo,
-                    "premio_total": concurso.premio_total
+                    "concurso_nome": concurso.titulo or f"Concurso #{concurso.id}",
+                    "premio_total": concurso.premio_total or 0.0,
+                    "data_sorteio_prevista": concurso.data_sorteio_prevista.isoformat() if concurso.data_sorteio_prevista else None
                 }
             
             # Fallback: preço padrão
             return {
                 "preco": 5.0,
                 "concurso_id": None,
-                "concurso_nome": "Próximo Sorteio",
-                "premio_total": 0.0
+                "concurso_nome": "Aguardando novo concurso",
+                "premio_total": 0.0,
+                "data_sorteio_prevista": None
             }
         
         except Exception as e:
@@ -494,7 +579,101 @@ async def get_bet_price():
             return {
                 "preco": 5.0,
                 "concurso_id": None,
-                "concurso_nome": "Próximo Sorteio",
-                "premio_total": 0.0
+                "concurso_nome": "Aguardando novo concurso",
+                "premio_total": 0.0,
+                "data_sorteio_prevista": None
             }
+
+
+# ==================== PERFIL DO USUÁRIO ====================
+
+class ProfileResponse(BaseModel):
+    telegram_id: int
+    nome: str
+    cpf: Optional[str]
+    pix: Optional[str]
+    telefone: Optional[str]
+    cidade: Optional[str]
+    estado: Optional[str]
+    saldo: float
+    data_cadastro: str
+    cadastro_completo: bool
+    is_archived: bool
+
+
+@router.get("/profile/{telegram_id}", response_model=ProfileResponse)
+async def get_profile(telegram_id: int):
+    """
+    Retorna os dados do perfil do usuário.
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            result = await session.execute(
+                select(Usuario).where(Usuario.telegram_id == telegram_id)
+            )
+            usuario = result.scalar_one_or_none()
+            
+            if not usuario:
+                raise HTTPException(status_code=404, detail="Usuário não encontrado")
+            
+            return ProfileResponse(
+                telegram_id=usuario.telegram_id,
+                nome=usuario.nome or "",
+                cpf=usuario.cpf,
+                pix=usuario.pix,
+                telefone=usuario.telefone,
+                cidade=usuario.cidade,
+                estado=usuario.estado,
+                saldo=usuario.saldo,
+                data_cadastro=usuario.data_cadastro.isoformat() if usuario.data_cadastro else "",
+                cadastro_completo=usuario.cadastro_completo or False,
+                is_archived=usuario.is_archived or False
+            )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Erro ao buscar perfil: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Erro ao buscar perfil")
+
+
+class ArchiveAccountRequest(BaseModel):
+    telegram_id: int
+
+
+@router.post("/profile/archive")
+async def archive_account(request: ArchiveAccountRequest):
+    """
+    Arquivar conta do usuário (soft delete).
+    A conta não será deletada, apenas arquivada.
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            from datetime import datetime
+            
+            result = await session.execute(
+                select(Usuario).where(Usuario.telegram_id == request.telegram_id)
+            )
+            usuario = result.scalar_one_or_none()
+            
+            if not usuario:
+                raise HTTPException(status_code=404, detail="Usuário não encontrado")
+            
+            if usuario.is_archived:
+                return {"message": "Conta já está arquivada", "success": True}
+            
+            usuario.is_archived = True
+            usuario.data_arquivamento = datetime.utcnow()
+            
+            await session.commit()
+            
+            return {
+                "message": "Conta arquivada com sucesso. O administrador pode reativá-la a qualquer momento.",
+                "success": True
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Erro ao arquivar conta: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Erro ao arquivar conta")
 

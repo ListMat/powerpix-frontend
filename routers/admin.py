@@ -11,7 +11,7 @@ from jose import JWTError, jwt
 import bcrypt
 from database import (
     AsyncSessionLocal, Usuario, Sorteio, Aposta, Admin, StatusSorteio, SystemConfig, 
-    Concurso, Promocao, StatusConcurso, TipoPromocao, get_db
+    Concurso, Promocao, StatusConcurso, TipoPromocao, get_db, Transacao, TipoTransacao, StatusTransacao
 )
 from schemas import DrawNumbersSchema
 from pydantic import ValidationError
@@ -914,4 +914,243 @@ async def get_official_powerball_result(
         "data": result,
         "next_draw": next_draw
     }
+
+
+# ==================== GESTÃO DE USUÁRIOS ====================
+
+@router.get("/users", response_class=HTMLResponse)
+async def users_page(
+    request: Request,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+    search: Optional[str] = Query(None)
+):
+    """Página de listagem de usuários"""
+    try:
+        query = select(Usuario).order_by(Usuario.data_cadastro.desc())
+        
+        if search:
+            search_term = f"%{search}%"
+            query = query.where(
+                (Usuario.nome.ilike(search_term)) |
+                (Usuario.cpf.ilike(search_term)) |
+                (Usuario.telefone.ilike(search_term))
+            )
+        
+        result = await db.execute(query)
+        usuarios = result.scalars().all()
+        
+        return templates.TemplateResponse(
+            "users.html",
+            {
+                "request": request,
+                "usuarios": usuarios,
+                "search": search or ""
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/users/{user_id}", response_class=HTMLResponse)
+async def user_detail(
+    user_id: int,
+    request: Request,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Página de detalhes do usuário"""
+    try:
+        result = await db.execute(
+            select(Usuario).where(Usuario.id == user_id)
+        )
+        usuario = result.scalar_one_or_none()
+        
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        # Buscar apostas do usuário
+        result = await db.execute(
+            select(Aposta)
+            .where(Aposta.usuario_id == user_id)
+            .order_by(Aposta.data_aposta.desc())
+            .limit(50)
+        )
+        apostas = result.scalars().all()
+        
+        # Buscar transações do usuário
+        result = await db.execute(
+            select(Transacao)
+            .where(Transacao.usuario_id == user_id)
+            .order_by(Transacao.data_transacao.desc())
+            .limit(50)
+        )
+        transacoes = result.scalars().all()
+        
+        return templates.TemplateResponse(
+            "user_detail.html",
+            {
+                "request": request,
+                "usuario": usuario,
+                "apostas": apostas,
+                "transacoes": transacoes
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/users/{user_id}/edit")
+async def edit_user(
+    user_id: int,
+    request: Request,
+    nome: str = Form(None),
+    cpf: str = Form(None),
+    pix: str = Form(None),
+    telefone: str = Form(None),
+    cidade: str = Form(None),
+    estado: str = Form(None),
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Editar dados do usuário"""
+    try:
+        result = await db.execute(
+            select(Usuario).where(Usuario.id == user_id)
+        )
+        usuario = result.scalar_one_or_none()
+        
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        if nome is not None:
+            usuario.nome = nome.strip() if nome else None
+        if cpf is not None:
+            usuario.cpf = cpf.replace(".", "").replace("-", "").strip() if cpf else None
+        if pix is not None:
+            usuario.pix = pix.strip() if pix else None
+        if telefone is not None:
+            usuario.telefone = telefone.replace("(", "").replace(")", "").replace(" ", "").replace("-", "").strip() if telefone else None
+        if cidade is not None:
+            usuario.cidade = cidade.strip() if cidade else None
+        if estado is not None:
+            usuario.estado = estado.strip() if estado else None
+        
+        await db.commit()
+        
+        return RedirectResponse(url=f"/admin/users/{user_id}", status_code=303)
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/users/{user_id}/delete")
+async def delete_user(
+    user_id: int,
+    request: Request,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Deletar usuário (soft delete - arquivar)"""
+    try:
+        from datetime import datetime
+        
+        result = await db.execute(
+            select(Usuario).where(Usuario.id == user_id)
+        )
+        usuario = result.scalar_one_or_none()
+        
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        usuario.is_archived = True
+        usuario.data_arquivamento = datetime.utcnow()
+        
+        await db.commit()
+        
+        return RedirectResponse(url="/admin/users", status_code=303)
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/users/{user_id}/reactivate")
+async def reactivate_user(
+    user_id: int,
+    request: Request,
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Reativar conta arquivada do usuário"""
+    try:
+        result = await db.execute(
+            select(Usuario).where(Usuario.id == user_id)
+        )
+        usuario = result.scalar_one_or_none()
+        
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        usuario.is_archived = False
+        usuario.data_arquivamento = None
+        
+        await db.commit()
+        
+        return RedirectResponse(url=f"/admin/users/{user_id}", status_code=303)
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/users/{user_id}/add-balance")
+async def add_balance(
+    user_id: int,
+    request: Request,
+    valor: float = Form(...),
+    descricao: str = Form("Saldo adicionado pelo administrador"),
+    admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Adicionar saldo ao usuário"""
+    try:
+        if valor <= 0:
+            raise HTTPException(status_code=400, detail="Valor deve ser positivo")
+        
+        result = await db.execute(
+            select(Usuario).where(Usuario.id == user_id)
+        )
+        usuario = result.scalar_one_or_none()
+        
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        # Adicionar saldo
+        usuario.saldo += valor
+        
+        # Registrar transação
+        transacao = Transacao(
+            usuario_id=usuario.id,
+            tipo=TipoTransacao.DEPOSITO,
+            valor=valor,
+            status=StatusTransacao.PAGO,
+            descricao=descricao
+        )
+        db.add(transacao)
+        
+        await db.commit()
+        
+        return RedirectResponse(url=f"/admin/users/{user_id}", status_code=303)
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 

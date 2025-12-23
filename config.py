@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
     ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "senha_forte")
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///powerpix.db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/powerpix")
     VALOR_APOSTA: float = float(os.getenv("VALOR_APOSTA", "5.00"))
     
     # Asaas Configuration

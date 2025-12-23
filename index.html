@@ -512,12 +512,117 @@
         }
 
         .btn-secondary:active { transform: scale(0.98); }
+
+        .btn-danger {
+            width: 100%;
+            padding: 14px;
+            background: var(--error);
+            border: 2px solid var(--error);
+            color: white;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-danger:active { transform: scale(0.98); }
+
+        /* TABS */
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .info-value {
+            color: var(--text);
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .bet-card, .transaction-card, .result-card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-won {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .status-lost {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        .status-pending {
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--text-muted);
+        }
     </style>
 </head>
 <body>
 
-    <!-- STEPPER -->
-    <div class="stepper" id="stepper">
+    <!-- STEPPER (oculto na tela de login) -->
+    <div class="stepper" id="stepper" style="display: none;">
         <div class="step active" data-step="1">
             <div class="step-circle">1</div>
             <div class="step-label">Dados Pessoais</div>
@@ -532,23 +637,80 @@
         </div>
     </div>
 
+    <!-- SCREEN 0: LOGIN -->
+    <div class="screen" id="screen-0">
+        <div style="text-align: center; margin-bottom: 40px; padding-top: 40px;">
+            <div style="font-size: 3rem; margin-bottom: 15px;">⚡</div>
+            <h1 style="font-size: 1.8rem; margin: 0 0 10px; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">PowerPix</h1>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Faça login para continuar</p>
+        </div>
+
+        <form id="form-login" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label>CPF <span class="required">*</span></label>
+                <input type="text" class="form-input" id="login-cpf" required placeholder="000.000.000-00" maxlength="14">
+                <div class="form-help">
+                    <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                    Digite seu CPF cadastrado
+                </div>
+                <div class="form-error" id="login-error" style="display: none;">
+                    <i data-lucide="alert-circle" style="width: 14px; height: 14px;"></i>
+                    <span id="login-error-text">CPF ou telefone inválidos</span>
+                </div>
+        </div>
+
+            <div class="form-group">
+                <label>Telefone <span class="required">*</span></label>
+                <input type="tel" class="form-input" id="login-telefone" required placeholder="(00) 00000-0000" maxlength="15">
+                <div class="form-help">
+                    <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                    Digite o telefone cadastrado
+                </div>
+        </div>
+
+            <button type="submit" class="btn-primary">
+                Entrar
+                <i data-lucide="log-in" style="width: 20px; height: 20px;"></i>
+            </button>
+
+            <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px;">
+                    Não tem uma conta?
+                </p>
+                <button type="button" class="btn-secondary" onclick="showScreen(1)">
+                    Criar Nova Conta
+                </button>
+            </div>
+        </form>
+    </div>
+
     <!-- HEADER -->
     <header class="header" id="game-header" style="display: none;">
         <div class="balance-container">
             <span class="balance-label">Saldo Disponível</span>
             <span class="balance-value" id="user-balance">R$ 0,00</span>
         </div>
-        <button class="btn-deposit" onclick="openDepositModal()">
-            <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i>
-            DEPOSITAR
-        </button>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-deposit" onclick="openDepositModal()">
+                <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i>
+                DEPOSITAR
+            </button>
+            <button class="btn-deposit" onclick="showScreen(4)" style="background: var(--card-bg); box-shadow: none;">
+                <i data-lucide="user" style="width: 18px; height: 18px;"></i>
+            </button>
+        </div>
     </header>
 
     <!-- SCREEN 1: DADOS PESSOAIS -->
-    <div class="screen active" id="screen-1">
+    <div class="screen" id="screen-1">
         <div style="text-align: center; margin-bottom: 30px;">
             <h1 style="font-size: 1.5rem; margin: 0 0 10px;">Bem-vindo ao PowerPix! 🎮</h1>
             <p style="color: var(--text-muted); font-size: 0.9rem;">Complete seu cadastro para começar</p>
+            <div style="margin-top: 15px;">
+                <button type="button" class="btn-secondary" onclick="showScreen(0)" style="padding: 8px 16px; font-size: 0.85rem;">
+                    Já tenho conta - Fazer Login
+                </button>
+            </div>
         </div>
 
         <form id="form-personal" onsubmit="nextStep(event, 2)">
@@ -631,6 +793,15 @@
                 <i data-lucide="arrow-right" style="width: 20px; height: 20px;"></i>
             </button>
         </form>
+        
+        <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px;">
+                Já tem uma conta?
+            </p>
+            <button type="button" class="btn-secondary" onclick="showScreen(0)">
+                Fazer Login
+            </button>
+        </div>
     </div>
 
     <!-- SCREEN 2: DADOS DE PAGAMENTO -->
@@ -667,6 +838,15 @@
                 Voltar
             </button>
         </form>
+        
+        <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px;">
+                Já tem uma conta?
+            </p>
+            <button type="button" class="btn-secondary" onclick="showScreen(0)">
+                Fazer Login
+            </button>
+        </div>
     </div>
 
     <!-- SCREEN 3: JOGAR -->
@@ -675,6 +855,27 @@
             <div class="price-display">
                 <span class="price-label">Valor da Aposta</span>
                 <span class="price-value" id="bet-price">R$ 5,00</span>
+            </div>
+        </div>
+
+        <!-- Informações do Concurso -->
+        <div id="concurso-info" style="background: var(--card-bg); margin: 20px; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0; font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="trophy" style="width: 18px; height: 18px; color: #F59E0B;"></i>
+                    <span id="concurso-nome">Aguardando novo concurso</span>
+                </h3>
+                <span id="concurso-id" style="font-size: 0.75rem; color: var(--text-muted);"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 120px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Prêmio Total</div>
+                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary);" id="concurso-premio">R$ 0,00</div>
+                </div>
+                <div style="flex: 1; min-width: 120px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Data do Sorteio</div>
+                    <div style="font-size: 0.9rem; font-weight: 600; color: var(--text);" id="concurso-data">A definir</div>
+                </div>
             </div>
         </div>
 
@@ -776,6 +977,113 @@
         </div>
     </div>
 
+    <!-- SCREEN 4: PERFIL -->
+    <div class="screen" id="screen-4">
+        <div style="padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h1 style="font-size: 1.5rem; margin: 0;">Meu Perfil</h1>
+                <button class="btn-secondary" onclick="showScreen(3)" style="padding: 8px 16px; font-size: 0.85rem;">
+                    <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+                    Voltar
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border);">
+                <button class="tab-btn active" onclick="switchTab('dados')" data-tab="dados">
+                    <i data-lucide="user" style="width: 18px; height: 18px;"></i>
+                    Dados
+                </button>
+                <button class="tab-btn" onclick="switchTab('apostas')" data-tab="apostas">
+                    <i data-lucide="ticket" style="width: 18px; height: 18px;"></i>
+                    Apostas
+                </button>
+                <button class="tab-btn" onclick="switchTab('transacoes')" data-tab="transacoes">
+                    <i data-lucide="wallet" style="width: 18px; height: 18px;"></i>
+                    Transações
+                </button>
+                <button class="tab-btn" onclick="switchTab('resultados')" data-tab="resultados">
+                    <i data-lucide="award" style="width: 18px; height: 18px;"></i>
+                    Resultados
+                </button>
+            </div>
+
+            <!-- Tab Content: Dados -->
+            <div id="tab-dados" class="tab-content active">
+                <div style="background: var(--card-bg); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 15px; font-size: 1.1rem;">Informações Pessoais</h3>
+                    <div id="profile-data" style="display: grid; gap: 15px;">
+                        <!-- Dados serão preenchidos via JavaScript -->
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="btn-secondary" onclick="handleLogout()">
+                        <i data-lucide="log-out" style="width: 18px; height: 18px;"></i>
+                        Deslogar
+                    </button>
+                    <button class="btn-danger" onclick="openArchiveModal()" style="background: var(--error); border-color: var(--error);">
+                        <i data-lucide="archive" style="width: 18px; height: 18px;"></i>
+                        Arquivar Conta
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content: Apostas -->
+            <div id="tab-apostas" class="tab-content">
+                <div id="bets-list" style="display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Lista será preenchida via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Tab Content: Transações -->
+            <div id="tab-transacoes" class="tab-content">
+                <div id="transactions-list" style="display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Lista será preenchida via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Tab Content: Resultados -->
+            <div id="tab-resultados" class="tab-content">
+                <div id="results-list" style="display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Lista será preenchida via JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ARQUIVAR CONTA -->
+    <div class="modal-overlay" id="archive-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i data-lucide="alert-triangle" style="width: 24px; height: 24px; color: var(--warning);"></i>
+                    Arquivar Conta
+                </div>
+                <button class="btn-close" onclick="closeArchiveModal()">
+                    <i data-lucide="x" style="width: 24px; height: 24px;"></i>
+                </button>
+            </div>
+
+            <div style="padding: 20px 0;">
+                <p style="margin-bottom: 15px; line-height: 1.6;">
+                    <strong>Atenção!</strong> Sua conta será desativada e poderá ser reativada pelo administrador.
+                </p>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+                    Todos os seus dados serão mantidos, mas você não poderá fazer apostas até que a conta seja reativada.
+                </p>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-secondary" onclick="closeArchiveModal()" style="flex: 1;">
+                        Cancelar
+                    </button>
+                    <button class="btn-danger" onclick="confirmArchive()" style="flex: 1; background: var(--error); border-color: var(--error);">
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = window.location.origin;
         const tg = window.Telegram.WebApp;
@@ -789,7 +1097,13 @@
             telegramId: tg.initDataUnsafe?.user?.id || 123456789,
             currentStep: 1,
             registered: false,
-            pixInterval: null
+            pixInterval: null,
+            concurso: {
+                id: null,
+                nome: 'Aguardando novo concurso',
+                premio: 0.00,
+                dataSorteio: null
+            }
         };
 
         const LIMITS = { WHITE: 20, RED: 5 };
@@ -797,11 +1111,83 @@
         // INIT
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
-            checkRegistration();
+            
+            // Aplicar máscaras nos campos de login também
             applyMasks();
             setupValidation();
-            fetchConfig();
+            
+            // Sempre mostrar tela de login primeiro (acesso via web)
+            // Se tiver telegram_id válido do Telegram, verificar cadastro automaticamente
+            if (state.telegramId && state.telegramId !== 123456789) {
+                // Está acessando pelo Telegram - verificar cadastro
+                checkRegistration();
+                fetchConfig();
+            } else {
+                // Acesso via web - sempre mostrar tela de login primeiro
+                showScreen(0);
+            }
         });
+
+        // ==================== LOGIN ====================
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const cpf = document.getElementById('login-cpf').value.trim();
+            const telefone = document.getElementById('login-telefone').value.trim();
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="loader"></div>';
+            btn.disabled = true;
+            
+            const errorEl = document.getElementById('login-error');
+            errorEl.style.display = 'none';
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/player/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cpf, telefone })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    // Login bem-sucedido - usar telegram_id retornado
+                    state.telegramId = data.telegram_id;
+                    state.registered = true;
+                    
+                    if (data.cadastro_completo) {
+                        // Cadastro completo - ir direto para jogo
+                        showScreen(3);
+                        fetchUserData();
+                        fetchConfig();
+                    } else {
+                        // Cadastro incompleto - mostrar cadastro
+                        showScreen(1);
+                    }
+                    
+                    tg.showAlert('✅ Login realizado com sucesso!');
+                    tg.HapticFeedback.notificationOccurred('success');
+                } else {
+                    // Erro no login
+                    document.getElementById('login-error-text').textContent = data.message || 'CPF ou telefone inválidos';
+                    errorEl.style.display = 'flex';
+                    tg.showAlert(`❌ ${data.message || 'Erro ao fazer login'}`);
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+            } catch (e) {
+                console.error("Erro ao fazer login", e);
+                document.getElementById('login-error-text').textContent = 'Erro de conexão. Tente novamente.';
+                errorEl.style.display = 'flex';
+                tg.showAlert('❌ Erro de conexão');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                setTimeout(() => lucide.createIcons(), 100);
+            }
+        }
 
         // ==================== REGISTRATION CHECK ====================
 
@@ -818,7 +1204,7 @@
                     state.registered = true;
                     showScreen(3);
                     fetchUserData();
-                } else {
+            } else {
                     showScreen(1);
                 }
             } catch (e) {
@@ -833,25 +1219,41 @@
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(`screen-${step}`).classList.add('active');
             
-            // Update stepper
-            document.querySelectorAll('.step').forEach((s, i) => {
-                s.classList.remove('active', 'completed');
-                if (i + 1 < step) s.classList.add('completed');
-                if (i + 1 === step) s.classList.add('active');
-            });
-
-            state.currentStep = step;
-
-            if (step === 3) {
-                document.getElementById('game-header').style.display = 'flex';
-                document.getElementById('game-footer').style.display = 'block';
-                if (!document.getElementById('grid-white').children.length) {
-                    renderGrids();
-                }
-                fetchUserData();
-            } else {
+            // Esconder stepper na tela de login e perfil
+            if (step === 0 || step === 4) {
+                document.getElementById('stepper').style.display = 'none';
                 document.getElementById('game-header').style.display = 'none';
                 document.getElementById('game-footer').style.display = 'none';
+                
+                if (step === 4) {
+                    // Carregar dados do perfil ao abrir
+                    switchTab('dados');
+                }
+                } else {
+                document.getElementById('stepper').style.display = 'flex';
+                
+                // Update stepper apenas para telas de cadastro (1 e 2)
+                if (step === 1 || step === 2) {
+                    document.querySelectorAll('.step').forEach((s, i) => {
+                        s.classList.remove('active', 'completed');
+                        if (i + 1 < step) s.classList.add('completed');
+                        if (i + 1 === step) s.classList.add('active');
+                    });
+                    state.currentStep = step;
+                }
+
+                if (step === 3) {
+                    document.getElementById('game-header').style.display = 'flex';
+                    document.getElementById('game-footer').style.display = 'block';
+                    if (!document.getElementById('grid-white').children.length) {
+                        renderGrids();
+                    }
+                    fetchUserData();
+                    fetchConfig(); // Buscar informações do concurso
+                } else {
+                    document.getElementById('game-header').style.display = 'none';
+                    document.getElementById('game-footer').style.display = 'none';
+                }
             }
 
             setTimeout(() => lucide.createIcons(), 100);
@@ -910,22 +1312,64 @@
                 validateCPF(e.target);
             });
 
-            const tel = document.getElementById('telefone');
-            tel.addEventListener('input', (e) => {
-                let val = e.target.value.replace(/\D/g, '');
-                if (val.length <= 11) {
-                    if (val.length <= 10) {
-                        val = val.replace(/(\d{2})(\d{4})(\d{0,4})/, (m, p1, p2, p3) => {
-                            return p1 ? '(' + p1 + ') ' + (p2 || '') + (p3 ? '-' + p3 : '') : val;
+            // Máscara para CPF (login)
+            const loginCpf = document.getElementById('login-cpf');
+            if (loginCpf) {
+                loginCpf.addEventListener('input', (e) => {
+                    let val = e.target.value.replace(/\D/g, '');
+                    if (val.length <= 11) {
+                        val = val.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, (m, p1, p2, p3, p4) => {
+                            let r = p1;
+                            if (p2) r += '.' + p2;
+                            if (p3) r += '.' + p3;
+                            if (p4) r += '-' + p4;
+                            return r;
                         });
-                } else {
-                        val = val.replace(/(\d{2})(\d{5})(\d{0,4})/, (m, p1, p2, p3) => {
-                            return p1 ? '(' + p1 + ') ' + (p2 || '') + (p3 ? '-' + p3 : '') : val;
-                        });
+                        e.target.value = val;
                     }
-                    e.target.value = val;
-                }
-            });
+                });
+            }
+
+            // Máscara para telefone (cadastro)
+            // Máscara para telefone (cadastro)
+            const tel = document.getElementById('telefone');
+            if (tel) {
+                tel.addEventListener('input', (e) => {
+                    let val = e.target.value.replace(/\D/g, '');
+                    if (val.length <= 11) {
+                        if (val.length <= 10) {
+                            val = val.replace(/(\d{2})(\d{4})(\d{0,4})/, (m, p1, p2, p3) => {
+                                return p1 ? '(' + p1 + ') ' + (p2 || '') + (p3 ? '-' + p3 : '') : val;
+                            });
+                        } else {
+                            val = val.replace(/(\d{2})(\d{5})(\d{0,4})/, (m, p1, p2, p3) => {
+                                return p1 ? '(' + p1 + ') ' + (p2 || '') + (p3 ? '-' + p3 : '') : val;
+                            });
+                        }
+                        e.target.value = val;
+                    }
+                });
+            }
+
+            // Máscara para telefone (login)
+            const loginTel = document.getElementById('login-telefone');
+            if (loginTel) {
+                loginTel.addEventListener('input', (e) => {
+                    let val = e.target.value.replace(/\D/g, '');
+                    if (val.length <= 11) {
+                        if (val.length <= 10) {
+                            val = val.replace(/(\d{2})(\d{4})(\d{0,4})/, (m, p1, p2, p3) => {
+                                return p1 ? '(' + p1 + ') ' + (p2 || '') + (p3 ? '-' + p3 : '') : val;
+                            });
+                        } else {
+                            val = val.replace(/(\d{2})(\d{5})(\d{0,4})/, (m, p1, p2, p3) => {
+                                return p1 ? '(' + p1 + ') ' + (p2 || '') + (p3 ? '-' + p3 : '') : val;
+                            });
+                        }
+                        e.target.value = val;
+                    }
+                });
+            }
         }
 
         // ==================== VALIDATION ====================
@@ -1052,10 +1496,60 @@
                 const data = await res.json();
                 state.betPrice = data.preco || 5.00;
                 document.getElementById('bet-price').textContent = formatCurrency(state.betPrice);
+                
+                // Atualizar informações do concurso
+                state.concurso.id = data.concurso_id;
+                state.concurso.nome = data.concurso_nome || 'Aguardando novo concurso';
+                state.concurso.premio = data.premio_total || 0.00;
+                state.concurso.dataSorteio = data.data_sorteio_prevista;
+                
+                updateConcursoInfo();
                 updateGameUI();
             } catch (e) {
                 console.error("Erro config", e);
             }
+        }
+
+        function updateConcursoInfo() {
+            const nomeEl = document.getElementById('concurso-nome');
+            const idEl = document.getElementById('concurso-id');
+            const premioEl = document.getElementById('concurso-premio');
+            const dataEl = document.getElementById('concurso-data');
+            
+            if (nomeEl) nomeEl.textContent = state.concurso.nome;
+            
+            if (idEl) {
+                if (state.concurso.id) {
+                    idEl.textContent = `#${state.concurso.id}`;
+                    idEl.style.display = 'block';
+                } else {
+                    idEl.style.display = 'none';
+                }
+            }
+            
+            if (premioEl) {
+                premioEl.textContent = formatCurrency(state.concurso.premio);
+                if (state.concurso.premio > 0) {
+                    premioEl.style.color = 'var(--primary)';
+                } else {
+                    premioEl.style.color = 'var(--text-muted)';
+                }
+            }
+            
+            if (dataEl) {
+                if (state.concurso.dataSorteio) {
+                    const data = new Date(state.concurso.dataSorteio);
+                    const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+                    dataEl.textContent = data.toLocaleDateString('pt-BR', options);
+                    dataEl.style.color = 'var(--text)';
+                } else {
+                    dataEl.textContent = 'A definir';
+                    dataEl.style.color = 'var(--text-muted)';
+                }
+            }
+            
+            // Recriar ícones após atualizar conteúdo
+            setTimeout(() => lucide.createIcons(), 100);
         }
 
         // ==================== GAME LOGIC ====================
@@ -1179,7 +1673,7 @@
                     red: Array.from(state.red),
                 action: 'aposta_realizada'
             };
-
+            
                 tg.sendData(JSON.stringify(payload));
                 tg.HapticFeedback.notificationOccurred('success');
                 
@@ -1267,6 +1761,252 @@
 
         function formatCurrency(val) {
             return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        // ==================== PERFIL ====================
+
+        let currentTab = 'dados';
+        let profileData = null;
+
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === `tab-${tab}`);
+            });
+            
+            if (tab === 'dados') {
+                loadProfileData();
+            } else if (tab === 'apostas') {
+                loadBets();
+            } else if (tab === 'transacoes') {
+                loadTransactions();
+            } else if (tab === 'resultados') {
+                loadResults();
+            }
+            
+            setTimeout(() => lucide.createIcons(), 100);
+        }
+
+        async function loadProfileData() {
+            try {
+                const res = await fetch(`${API_BASE}/api/player/profile/${state.telegramId}`);
+                const data = await res.json();
+                profileData = data;
+                
+                const container = document.getElementById('profile-data');
+                container.innerHTML = `
+                    <div class="info-item">
+                        <span class="info-label">Nome</span>
+                        <span class="info-value">${data.nome || 'Não informado'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">CPF</span>
+                        <span class="info-value">${data.cpf || 'Não informado'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Telefone</span>
+                        <span class="info-value">${data.telefone || 'Não informado'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Chave PIX</span>
+                        <span class="info-value">${data.pix || 'Não informado'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Cidade</span>
+                        <span class="info-value">${data.cidade || 'Não informado'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Estado</span>
+                        <span class="info-value">${data.estado || 'Não informado'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Saldo</span>
+                        <span class="info-value" style="color: var(--primary);">${formatCurrency(data.saldo)}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Data de Cadastro</span>
+                        <span class="info-value">${new Date(data.data_cadastro).toLocaleDateString('pt-BR')}</span>
+                    </div>
+                `;
+            } catch (e) {
+                console.error("Erro ao carregar perfil", e);
+                tg.showAlert("Erro ao carregar dados do perfil");
+            }
+        }
+
+        async function loadBets() {
+            try {
+                const res = await fetch(`${API_BASE}/api/player/my-bets/${state.telegramId}`);
+                const data = await res.json();
+                
+                const container = document.getElementById('bets-list');
+                const allBets = [...(data.jogos_ativos || []), ...(data.historico || [])];
+                
+                if (allBets.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Nenhuma aposta encontrada</p>';
+                    return;
+                }
+                
+                container.innerHTML = allBets.map(bet => {
+                    const statusClass = bet.status_display === 'GANHOU' ? 'status-won' : 
+                                      bet.status_display === 'PERDEU' ? 'status-lost' : 'status-pending';
+                    const date = new Date(bet.data_aposta).toLocaleDateString('pt-BR');
+                    
+                    return `
+                        <div class="bet-card">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                                <div>
+                                    <div style="font-weight: 700; margin-bottom: 5px;">Aposta #${bet.id}</div>
+                                    <div style="font-size: 0.85rem; color: var(--text-muted);">${date}</div>
+                                </div>
+                                <span class="status-badge ${statusClass}">${bet.status_display}</span>
+                            </div>
+                            <div style="font-size: 0.9rem; margin-bottom: 8px;">
+                                <div>Brancos: ${bet.numeros_brancos.slice(0, 10).join(', ')}${bet.numeros_brancos.length > 10 ? '...' : ''}</div>
+                                <div>Vermelhos: ${bet.numeros_vermelhos.join(', ')}</div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-weight: 600;">
+                                <span>Valor: ${formatCurrency(bet.valor_pago)}</span>
+                                ${bet.valor_premio > 0 ? `<span style="color: var(--success);">Prêmio: ${formatCurrency(bet.valor_premio)}</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error("Erro ao carregar apostas", e);
+            }
+        }
+
+        async function loadTransactions() {
+            try {
+                const res = await fetch(`${API_BASE}/api/player/history/transactions/${state.telegramId}`);
+                const data = await res.json();
+                
+                const container = document.getElementById('transactions-list');
+                
+                if (!data.transacoes || data.transacoes.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Nenhuma transação encontrada</p>';
+                    return;
+                }
+                
+                container.innerHTML = data.transacoes.map(tx => {
+                    const isPositive = tx.tipo === 'DEPOSITO' || tx.tipo === 'PREMIO';
+                    const date = new Date(tx.data_transacao).toLocaleDateString('pt-BR');
+                    const statusClass = tx.status === 'PAGO' ? 'status-won' : 
+                                      tx.status === 'PENDENTE' ? 'status-pending' : 'status-lost';
+                    
+                    return `
+                        <div class="transaction-card">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                                <div>
+                                    <div style="font-weight: 700; margin-bottom: 5px;">${tx.tipo}</div>
+                                    <div style="font-size: 0.85rem; color: var(--text-muted);">${date}</div>
+                                </div>
+                                <span class="status-badge ${statusClass}">${tx.status}</span>
+                            </div>
+                            <div style="font-weight: 700; font-size: 1.1rem; color: ${isPositive ? 'var(--success)' : 'var(--error)'};">
+                                ${isPositive ? '+' : '-'}${formatCurrency(tx.valor)}
+                            </div>
+                            ${tx.descricao ? `<div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;">${tx.descricao}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error("Erro ao carregar transações", e);
+            }
+        }
+
+        async function loadResults() {
+            try {
+                const res = await fetch(`${API_BASE}/api/player/my-bets/${state.telegramId}`);
+                const data = await res.json();
+                
+                const container = document.getElementById('results-list');
+                const historico = data.historico || [];
+                
+                if (historico.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Nenhum resultado disponível</p>';
+                    return;
+                }
+                
+                container.innerHTML = historico.map(bet => {
+                    const statusClass = bet.is_winner ? 'status-won' : 'status-lost';
+                    const statusText = bet.is_winner ? 'GANHOU' : 'PERDEU';
+                    const date = new Date(bet.data_aposta).toLocaleDateString('pt-BR');
+                    
+                    return `
+                        <div class="result-card">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                                <div>
+                                    <div style="font-weight: 700; margin-bottom: 5px;">Aposta #${bet.id}</div>
+                                    <div style="font-size: 0.85rem; color: var(--text-muted);">${date}</div>
+                                </div>
+                                <span class="status-badge ${statusClass}">${statusText}</span>
+                            </div>
+                            <div style="background: var(--bg-color); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+                                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Seus Números</div>
+                                <div style="font-size: 0.9rem;">
+                                    <div>Brancos: ${bet.numeros_brancos.join(', ')}</div>
+                                    <div>Vermelhos: ${bet.numeros_vermelhos.join(', ')}</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-weight: 600;">
+                                <span>Valor Apostado: ${formatCurrency(bet.valor_pago)}</span>
+                                ${bet.valor_premio > 0 ? `<span style="color: var(--success);">Prêmio: ${formatCurrency(bet.valor_premio)}</span>` : ''}
+                            </div>
+                            ${bet.acertos !== undefined ? `<div style="margin-top: 8px; font-size: 0.85rem; color: var(--text-muted);">Acertos: ${bet.acertos}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error("Erro ao carregar resultados", e);
+            }
+        }
+
+        function handleLogout() {
+            if (confirm('Deseja realmente sair da sua conta?')) {
+                state.telegramId = null;
+                state.registered = false;
+                showScreen(0);
+                tg.showAlert('Você foi deslogado com sucesso');
+            }
+        }
+
+        function openArchiveModal() {
+            document.getElementById('archive-modal').classList.add('open');
+            setTimeout(() => lucide.createIcons(), 100);
+        }
+
+        function closeArchiveModal() {
+            document.getElementById('archive-modal').classList.remove('open');
+        }
+
+        async function confirmArchive() {
+            try {
+                const res = await fetch(`${API_BASE}/api/player/profile/archive`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: state.telegramId })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    tg.showAlert('✅ ' + data.message);
+                    closeArchiveModal();
+                    handleLogout();
+                } else {
+                    tg.showAlert('❌ Erro ao arquivar conta');
+                }
+            } catch (e) {
+                console.error("Erro ao arquivar conta", e);
+                tg.showAlert('❌ Erro ao arquivar conta');
+            }
         }
     </script>
 </body>

@@ -75,6 +75,12 @@ async def root():
     return RedirectResponse(url="/admin/login")
 
 
+@app.get("/users")
+async def users_redirect():
+    """Rota /users - redireciona para /admin/users"""
+    return RedirectResponse(url="/admin/users")
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""

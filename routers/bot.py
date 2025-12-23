@@ -250,6 +250,14 @@ async def handle_web_app_data(message: types.Message):
                 )
                 return
             
+            # Verificar se conta está arquivada
+            if usuario.is_archived:
+                await message.answer(
+                    "❌ Sua conta foi arquivada!\n\n"
+                    "Entre em contato com o administrador para reativar sua conta."
+                )
+                return
+            
             # Verificar se cadastro está completo
             if not usuario.cadastro_completo or not usuario.cpf or not usuario.pix or not usuario.telefone:
                 await message.answer(

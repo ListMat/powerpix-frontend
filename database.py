@@ -74,6 +74,10 @@ class Usuario(Base):
     # Flag para verificar se cadastro está completo
     cadastro_completo = Column(Boolean, default=False, nullable=False)
     
+    # Soft delete - arquivamento de conta
+    is_archived = Column(Boolean, default=False, nullable=False)
+    data_arquivamento = Column(DateTime, nullable=True)
+    
     apostas = relationship("Aposta", back_populates="usuario")
     transacoes = relationship("Transacao", back_populates="usuario", cascade="all, delete-orphan")
 
@@ -211,78 +215,65 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
-    # Migração: Adicionar coluna revenue se não existir
+    # Migração: Adicionar colunas se não existirem (PostgreSQL)
     async with engine.begin() as conn:
         try:
             from sqlalchemy import text
+            
             # Verificar se a coluna revenue existe na tabela sorteios
             result = await conn.execute(
-                text("PRAGMA table_info(sorteios)")
+                text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'sorteios' AND column_name = 'revenue'
+                """)
             )
-            columns = result.fetchall()
-            column_names = [col[1] for col in columns]  # col[1] é o nome da coluna
-            
-            if 'revenue' not in column_names:
-                await conn.execute(text("ALTER TABLE sorteios ADD COLUMN revenue REAL DEFAULT 0.0"))
+            if not result.fetchone():
+                await conn.execute(text("ALTER TABLE sorteios ADD COLUMN revenue DOUBLE PRECISION DEFAULT 0.0"))
                 print("✓ Coluna 'revenue' adicionada à tabela sorteios")
             
-            # Migração: Adicionar colunas novas à tabela apostas
-            result = await conn.execute(
-                text("PRAGMA table_info(apostas)")
-            )
-            columns = result.fetchall()
-            column_names = [col[1] for col in columns]
+            # Verificar colunas na tabela apostas
+            for col_name, col_type, default in [
+                ('concurso_id', 'INTEGER', None),
+                ('is_winner', 'BOOLEAN', 'FALSE'),
+                ('cota_ganhadora', 'INTEGER', None),
+                ('valor_premio', 'DOUBLE PRECISION', '0.0'),
+                ('acertos', 'INTEGER', '0')
+            ]:
+                result = await conn.execute(
+                    text(f"""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'apostas' AND column_name = '{col_name}'
+                    """)
+                )
+                if not result.fetchone():
+                    default_clause = f" DEFAULT {default}" if default else ""
+                    await conn.execute(text(f"ALTER TABLE apostas ADD COLUMN {col_name} {col_type}{default_clause}"))
+                    print(f"✓ Coluna '{col_name}' adicionada à tabela apostas")
             
-            if 'concurso_id' not in column_names:
-                await conn.execute(text("ALTER TABLE apostas ADD COLUMN concurso_id INTEGER"))
-                print("✓ Coluna 'concurso_id' adicionada à tabela apostas")
-            
-            if 'is_winner' not in column_names:
-                await conn.execute(text("ALTER TABLE apostas ADD COLUMN is_winner BOOLEAN DEFAULT 0"))
-                print("✓ Coluna 'is_winner' adicionada à tabela apostas")
-            
-            if 'cota_ganhadora' not in column_names:
-                await conn.execute(text("ALTER TABLE apostas ADD COLUMN cota_ganhadora INTEGER"))
-                print("✓ Coluna 'cota_ganhadora' adicionada à tabela apostas")
-            
-            if 'valor_premio' not in column_names:
-                await conn.execute(text("ALTER TABLE apostas ADD COLUMN valor_premio REAL DEFAULT 0.0"))
-                print("✓ Coluna 'valor_premio' adicionada à tabela apostas")
-            
-            if 'acertos' not in column_names:
-                await conn.execute(text("ALTER TABLE apostas ADD COLUMN acertos INTEGER DEFAULT 0"))
-                print("✓ Coluna 'acertos' adicionada à tabela apostas")
-            
-            # Migração: Adicionar colunas de cadastro à tabela usuarios
-            result = await conn.execute(
-                text("PRAGMA table_info(usuarios)")
-            )
-            columns = result.fetchall()
-            column_names = [col[1] for col in columns]
-            
-            if 'pix' not in column_names:
-                await conn.execute(text("ALTER TABLE usuarios ADD COLUMN pix VARCHAR(255)"))
-                print("✓ Coluna 'pix' adicionada à tabela usuarios")
-            
-            if 'telefone' not in column_names:
-                await conn.execute(text("ALTER TABLE usuarios ADD COLUMN telefone VARCHAR(20)"))
-                print("✓ Coluna 'telefone' adicionada à tabela usuarios")
-            
-            if 'cidade' not in column_names:
-                await conn.execute(text("ALTER TABLE usuarios ADD COLUMN cidade VARCHAR(100)"))
-                print("✓ Coluna 'cidade' adicionada à tabela usuarios")
-            
-            if 'estado' not in column_names:
-                await conn.execute(text("ALTER TABLE usuarios ADD COLUMN estado VARCHAR(2)"))
-                print("✓ Coluna 'estado' adicionada à tabela usuarios")
-            
-            if 'cadastro_completo' not in column_names:
-                await conn.execute(text("ALTER TABLE usuarios ADD COLUMN cadastro_completo BOOLEAN DEFAULT 0"))
-                print("✓ Coluna 'cadastro_completo' adicionada à tabela usuarios")
-            
-            if 'cpf' not in column_names:
-                await conn.execute(text("ALTER TABLE usuarios ADD COLUMN cpf VARCHAR(14)"))
-                print("✓ Coluna 'cpf' adicionada à tabela usuarios")
+            # Verificar colunas na tabela usuarios
+            for col_name, col_type, default in [
+                ('pix', 'VARCHAR(255)', None),
+                ('telefone', 'VARCHAR(20)', None),
+                ('cidade', 'VARCHAR(100)', None),
+                ('estado', 'VARCHAR(2)', None),
+                ('cadastro_completo', 'BOOLEAN', 'FALSE'),
+                ('cpf', 'VARCHAR(14)', None),
+                ('is_archived', 'BOOLEAN', 'FALSE'),
+                ('data_arquivamento', 'TIMESTAMP', None)
+            ]:
+                result = await conn.execute(
+                    text(f"""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'usuarios' AND column_name = '{col_name}'
+                    """)
+                )
+                if not result.fetchone():
+                    default_clause = f" DEFAULT {default}" if default else ""
+                    await conn.execute(text(f"ALTER TABLE usuarios ADD COLUMN {col_name} {col_type}{default_clause}"))
+                    print(f"✓ Coluna '{col_name}' adicionada à tabela usuarios")
         except Exception as e:
             print(f"⚠ Aviso ao verificar/adicionar colunas: {e}")
     

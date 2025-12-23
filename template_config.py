@@ -16,6 +16,17 @@ def format_currency_br(value):
     except:
         return f"R$ {value}"
 
+def from_json_filter(value):
+    """Converte string JSON para objeto Python"""
+    import json
+    try:
+        if isinstance(value, str):
+            return json.loads(value)
+        return value
+    except:
+        return []
+
 # Registrar filtros globalmente
 templates.env.filters["currency"] = format_currency_br
+templates.env.filters["from_json"] = from_json_filter
 

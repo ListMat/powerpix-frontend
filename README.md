@@ -30,7 +30,7 @@ WEBHOOK_PATH=/webhook
 SECRET_KEY=gere_uma_chave_secreta_aqui
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=senha_forte
-DATABASE_URL=sqlite+aiosqlite:///powerpix.db
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/powerpix
 VALOR_APOSTA=5.00
 ```
 
