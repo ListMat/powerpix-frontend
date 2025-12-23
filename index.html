@@ -10,12 +10,15 @@
         :root {
             --bg-color: #0F172A;
             --card-bg: #1E293B;
-            --primary: #22C55E; /* Verde Pix */
+            --primary: #22C55E;
             --primary-hover: #16A34A;
-            --accent: #E11D48; /* Vermelho Powerball */
+            --accent: #E11D48;
             --text: #F8FAFC;
             --text-muted: #94A3B8;
             --border: #334155;
+            --error: #EF4444;
+            --success: #22C55E;
+            --warning: #F59E0B;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -24,9 +27,82 @@
             background-color: var(--bg-color);
             color: var(--text);
             margin: 0;
-            padding-bottom: 100px; /* Espaço para footer */
+            padding-bottom: 100px;
             user-select: none;
         }
+
+        /* STEPPER */
+        .stepper {
+            background: var(--card-bg);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .step {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .step::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 60%;
+            width: 80%;
+            height: 2px;
+            background: var(--border);
+            z-index: 0;
+        }
+
+        .step:last-child::after { display: none; }
+
+        .step-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--border);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
+            transition: all 0.3s;
+        }
+
+        .step.active .step-circle {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
+        }
+
+        .step.completed .step-circle {
+            background: var(--success);
+            color: white;
+        }
+
+        .step-label {
+            font-size: 0.7rem;
+            margin-top: 8px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .step.active .step-label { color: var(--primary); font-weight: 600; }
+
+        /* SCREENS */
+        .screen { display: none; padding: 20px; animation: fadeIn 0.3s; }
+        .screen.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         /* HEADER */
         .header {
@@ -43,11 +119,7 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
-        .balance-container {
-            display: flex;
-            flex-direction: column;
-        }
-
+        .balance-container { display: flex; flex-direction: column; }
         .balance-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
         .balance-value { font-size: 1.25rem; font-weight: 800; color: var(--primary); }
 
@@ -68,21 +140,107 @@
         }
         .btn-deposit:active { transform: scale(0.95); }
 
-        /* INFO BAR */
-        .info-bar {
+        /* FORM STYLES */
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .form-group label .required { color: var(--error); }
+
+        .form-input {
+            width: 100%;
+            padding: 14px;
+            background: var(--bg-color);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1); }
+
+        .form-input.error { border-color: var(--error); }
+        .form-input.success { border-color: var(--success); }
+
+        .form-help {
+            font-size: 0.8rem;
+            margin-top: 6px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-error {
+            font-size: 0.8rem;
+            margin-top: 6px;
+            color: var(--error);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-success {
+            font-size: 0.8rem;
+            margin-top: 6px;
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* GAME SECTION */
+        .game-header {
             background: var(--card-bg);
-            padding: 10px 20px;
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.9rem;
-            border-bottom: 1px solid var(--border);
         }
-        .cost-label { color: var(--text-muted); }
-        .cost-value { font-weight: 700; color: var(--text); }
 
-        /* GRID */
+        .price-display {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .price-label { font-size: 0.75rem; color: var(--text-muted); }
+        .price-value { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+
+        .btn-random {
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+            transition: transform 0.1s;
+        }
+
+        .btn-random:active { transform: scale(0.95); }
+
+        .random-help {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin: 8px 0 20px;
+            padding: 0 20px;
+        }
+
         .game-section { padding: 20px; }
+
         .section-title {
             font-size: 1rem;
             font-weight: 700;
@@ -91,7 +249,14 @@
             justify-content: space-between;
             align-items: center;
         }
-        .counter { font-size: 0.85rem; padding: 4px 10px; border-radius: 20px; background: var(--border); }
+
+        .counter {
+            font-size: 0.85rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: var(--border);
+        }
+
         .counter.full { background: var(--primary); color: #000; }
 
         .grid {
@@ -107,7 +272,7 @@
             justify-content: center;
             align-items: center;
             background: var(--card-bg);
-            border: 1px solid var(--border);
+            border: 2px solid var(--border);
             border-radius: 50%;
             font-weight: 600;
             font-size: 0.9rem;
@@ -116,7 +281,6 @@
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* Seleção Branca */
         .ball.white.selected {
             background: var(--text);
             color: var(--bg-color);
@@ -125,7 +289,6 @@
             box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
         }
 
-        /* Seleção Vermelha */
         .ball.red.selected {
             background: var(--accent);
             color: white;
@@ -147,6 +310,19 @@
             z-index: 90;
         }
 
+        .footer-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .summary-item { font-size: 0.85rem; }
+        .summary-label { color: var(--text-muted); }
+        .summary-value { font-weight: 700; color: var(--text); }
+
         .btn-action {
             width: 100%;
             padding: 16px;
@@ -166,8 +342,8 @@
             color: white;
             box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);
         }
-        
-        .btn-action.ready:active { transform: scale(0.98); }
+
+        .btn-action:active { transform: scale(0.98); }
 
         /* MODAL */
         .modal-overlay {
@@ -177,9 +353,10 @@
             z-index: 200;
             display: none;
             justify-content: center;
-            align-items: flex-end; /* Mobile bottom sheet style */
+            align-items: flex-end;
             animation: fadeIn 0.2s;
         }
+
         .modal-overlay.open { display: flex; }
 
         .modal-content {
@@ -193,7 +370,6 @@
         }
 
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         .modal-header {
             display: flex;
@@ -201,8 +377,19 @@
             align-items: center;
             margin-bottom: 20px;
         }
-        .modal-title { font-size: 1.2rem; font-weight: 700; }
-        .btn-close { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; padding: 5px; }
+
+        .modal-title { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+
+        .btn-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
         .deposit-options {
             display: grid;
@@ -213,7 +400,7 @@
 
         .chip {
             background: var(--bg-color);
-            border: 1px solid var(--border);
+            border: 2px solid var(--border);
             border-radius: 10px;
             padding: 12px 5px;
             text-align: center;
@@ -222,6 +409,7 @@
             cursor: pointer;
             transition: all 0.2s;
         }
+
         .chip:active, .chip.selected {
             border-color: var(--primary);
             background: rgba(34, 197, 94, 0.1);
@@ -250,6 +438,7 @@
             padding-top: 20px;
             border-top: 1px solid var(--border);
         }
+
         .pix-code {
             background: var(--bg-color);
             padding: 15px;
@@ -263,17 +452,19 @@
         }
 
         .status-badge {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             padding: 6px 12px;
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: 600;
             margin-bottom: 15px;
         }
+
         .status-pending { background: rgba(253, 186, 116, 0.2); color: #fb923c; }
         .status-success { background: rgba(34, 197, 94, 0.2); color: var(--primary); }
 
-        /* Loader */
         .loader {
             width: 20px; height: 20px;
             border: 3px solid rgba(255,255,255,0.3);
@@ -282,17 +473,70 @@
             animation: spin 1s ease-in-out infinite;
             display: inline-block;
         }
+
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* BUTTONS */
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary), #15803d);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 14px;
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text);
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .btn-secondary:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
 
+    <!-- STEPPER -->
+    <div class="stepper" id="stepper">
+        <div class="step active" data-step="1">
+            <div class="step-circle">1</div>
+            <div class="step-label">Dados Pessoais</div>
+        </div>
+        <div class="step" data-step="2">
+            <div class="step-circle">2</div>
+            <div class="step-label">Pagamento</div>
+        </div>
+        <div class="step" data-step="3">
+            <div class="step-circle">3</div>
+            <div class="step-label">Jogar</div>
+        </div>
+    </div>
+
     <!-- HEADER -->
-    <header class="header">
+    <header class="header" id="game-header" style="display: none;">
         <div class="balance-container">
             <span class="balance-label">Saldo Disponível</span>
-            <span class="balance-value" id="user-balance">R$ --,--</span>
+            <span class="balance-value" id="user-balance">R$ 0,00</span>
         </div>
         <button class="btn-deposit" onclick="openDepositModal()">
             <i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i>
@@ -300,37 +544,181 @@
         </button>
     </header>
 
-    <!-- INFO BAR -->
-    <div class="info-bar">
-        <span class="cost-label">Custo da Aposta:</span>
-        <span class="cost-value" id="bet-cost">R$ 5,00</span>
+    <!-- SCREEN 1: DADOS PESSOAIS -->
+    <div class="screen active" id="screen-1">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="font-size: 1.5rem; margin: 0 0 10px;">Bem-vindo ao PowerPix! 🎮</h1>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Complete seu cadastro para começar</p>
+        </div>
+
+        <form id="form-personal" onsubmit="nextStep(event, 2)">
+            <div class="form-group">
+                <label>Nome Completo <span class="required">*</span></label>
+                <input type="text" class="form-input" id="nome" required placeholder="Seu nome completo">
+                <div class="form-help">
+                    <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                    Nome completo como consta no documento
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>CPF <span class="required">*</span></label>
+                <input type="text" class="form-input" id="cpf" required placeholder="000.000.000-00" maxlength="14">
+                <div class="form-help" id="cpf-help">
+                    <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                    CPF válido (11 dígitos)
+                </div>
+                <div class="form-error" id="cpf-error" style="display: none;">
+                    <i data-lucide="alert-circle" style="width: 14px; height: 14px;"></i>
+                    <span>CPF inválido</span>
+                </div>
+                <div class="form-success" id="cpf-success" style="display: none;">
+                    <i data-lucide="check-circle" style="width: 14px; height: 14px;"></i>
+                    <span>CPF válido</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Telefone <span class="required">*</span></label>
+                <input type="tel" class="form-input" id="telefone" required placeholder="(00) 00000-0000" maxlength="15">
+                <div class="form-help">
+                    <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                    Número para contato
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Cidade <span style="color: var(--text-muted); font-weight: normal;">(opcional)</span></label>
+                <input type="text" class="form-input" id="cidade" placeholder="Sua cidade">
+            </div>
+
+            <div class="form-group">
+                <label>Estado (UF) <span style="color: var(--text-muted); font-weight: normal;">(opcional)</span></label>
+                <select class="form-input" id="estado">
+                    <option value="">Selecione...</option>
+                    <option value="AC">AC - Acre</option>
+                    <option value="AL">AL - Alagoas</option>
+                    <option value="AP">AP - Amapá</option>
+                    <option value="AM">AM - Amazonas</option>
+                    <option value="BA">BA - Bahia</option>
+                    <option value="CE">CE - Ceará</option>
+                    <option value="DF">DF - Distrito Federal</option>
+                    <option value="ES">ES - Espírito Santo</option>
+                    <option value="GO">GO - Goiás</option>
+                    <option value="MA">MA - Maranhão</option>
+                    <option value="MT">MT - Mato Grosso</option>
+                    <option value="MS">MS - Mato Grosso do Sul</option>
+                    <option value="MG">MG - Minas Gerais</option>
+                    <option value="PA">PA - Pará</option>
+                    <option value="PB">PB - Paraíba</option>
+                    <option value="PR">PR - Paraná</option>
+                    <option value="PE">PE - Pernambuco</option>
+                    <option value="PI">PI - Piauí</option>
+                    <option value="RJ">RJ - Rio de Janeiro</option>
+                    <option value="RN">RN - Rio Grande do Norte</option>
+                    <option value="RS">RS - Rio Grande do Sul</option>
+                    <option value="RO">RO - Rondônia</option>
+                    <option value="RR">RR - Roraima</option>
+                    <option value="SC">SC - Santa Catarina</option>
+                    <option value="SP">SP - São Paulo</option>
+                    <option value="SE">SE - Sergipe</option>
+                    <option value="TO">TO - Tocantins</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-primary">
+                Continuar
+                <i data-lucide="arrow-right" style="width: 20px; height: 20px;"></i>
+            </button>
+        </form>
     </div>
 
-    <!-- GAME AREA -->
-    <main class="game-section">
-        <!-- White Numbers -->
-        <div class="section-title">
-            <span style="display: flex; align-items: center; gap: 8px;">
-                <i data-lucide="circle" style="width: 16px; height: 16px;"></i>
-                Números (1-69)
-            </span>
-            <span id="counter-white" class="counter">0/20</span>
+    <!-- SCREEN 2: DADOS DE PAGAMENTO -->
+    <div class="screen" id="screen-2">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="font-size: 1.3rem; margin: 0 0 10px;">Chave Pix</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Onde você receberá seus prêmios</p>
         </div>
-        <div class="grid" id="grid-white"></div>
 
-        <!-- Red Numbers -->
-        <div class="section-title">
-            <span style="display: flex; align-items: center; gap: 8px; color: var(--accent);">
-                <i data-lucide="circle-dot" style="width: 16px; height: 16px;"></i>
-                Powerball (1-26)
-            </span>
-            <span id="counter-red" class="counter">0/5</span>
+        <form id="form-payment" onsubmit="nextStep(event, 3)">
+            <div class="form-group">
+                <label>Chave Pix <span class="required">*</span></label>
+                <input type="text" class="form-input" id="pix" required placeholder="CPF, e-mail, telefone ou chave aleatória">
+                <div class="form-help" id="pix-help">
+                    <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                    CPF, e-mail, telefone ou chave aleatória válida
+                </div>
+                <div class="form-error" id="pix-error" style="display: none;">
+                    <i data-lucide="alert-circle" style="width: 14px; height: 14px;"></i>
+                    <span id="pix-error-text">Chave Pix inválida</span>
+                </div>
+                <div class="form-success" id="pix-success" style="display: none;">
+                    <i data-lucide="check-circle" style="width: 14px; height: 14px;"></i>
+                    <span>Chave Pix válida</span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary">
+                Finalizar Cadastro
+                <i data-lucide="check" style="width: 20px; height: 20px;"></i>
+            </button>
+
+            <button type="button" class="btn-secondary" onclick="prevStep(1)">
+                Voltar
+            </button>
+        </form>
+    </div>
+
+    <!-- SCREEN 3: JOGAR -->
+    <div class="screen" id="screen-3">
+        <div class="game-header">
+            <div class="price-display">
+                <span class="price-label">Valor da Aposta</span>
+                <span class="price-value" id="bet-price">R$ 5,00</span>
+            </div>
         </div>
-        <div class="grid" id="grid-red"></div>
-    </main>
 
-    <!-- FOOTER -->
-    <footer class="footer">
+        <div style="padding: 20px;">
+            <button class="btn-random" onclick="gerarSurpresinha()">
+                <i data-lucide="shuffle" style="width: 20px; height: 20px;"></i>
+                Escolher Números Aleatórios
+            </button>
+            <p class="random-help">
+                O sistema escolhe os números automaticamente para você
+            </p>
+
+            <div class="section-title">
+                <span style="display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="circle" style="width: 16px; height: 16px;"></i>
+                    Números (1-69)
+                </span>
+                <span id="counter-white" class="counter">0/20</span>
+            </div>
+            <div class="grid" id="grid-white"></div>
+
+            <div class="section-title">
+                <span style="display: flex; align-items: center; gap: 8px; color: var(--accent);">
+                    <i data-lucide="circle-dot" style="width: 16px; height: 16px;"></i>
+                    Powerball (1-26)
+                </span>
+                <span id="counter-red" class="counter">0/5</span>
+            </div>
+            <div class="grid" id="grid-red"></div>
+        </div>
+    </div>
+
+    <!-- FOOTER (Só aparece na tela de jogo) -->
+    <footer class="footer" id="game-footer" style="display: none;">
+        <div class="footer-summary">
+            <div class="summary-item">
+                <div class="summary-label">Números Selecionados</div>
+                <div class="summary-value" id="summary-selected">0/25</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Valor da Aposta</div>
+                <div class="summary-value" id="summary-price">R$ 0,00</div>
+            </div>
+        </div>
         <button id="btn-action" class="btn-action" onclick="submitBet()" disabled>
             Selecione os Números
         </button>
@@ -340,7 +728,7 @@
     <div class="modal-overlay" id="deposit-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title" style="display: flex; align-items: center; gap: 10px;">
+                <div class="modal-title">
                     <i data-lucide="wallet" style="width: 24px; height: 24px;"></i>
                     Depositar via Pix
                 </div>
@@ -365,23 +753,22 @@
                     <input type="number" id="deposit-amount" class="custom-input" placeholder="0.00" inputmode="decimal">
                 </div>
 
-                <button class="btn-action ready" style="margin-top: 10px;" onclick="generatePix()">
+                <button class="btn-primary" onclick="generatePix()">
                     Gerar Pix
+                    <i data-lucide="qrcode" style="width: 20px; height: 20px;"></i>
                 </button>
             </div>
 
             <div id="step-pix" class="pix-area">
-                <div class="status-badge status-pending" id="pix-status" style="display: flex; align-items: center; gap: 8px; justify-content: center;">
+                <div class="status-badge status-pending" id="pix-status">
                     <i data-lucide="clock" style="width: 16px; height: 16px;"></i>
                     Aguardando Pagamento...
                 </div>
                 <p style="font-size: 0.9rem; opacity: 0.8; margin: 0;">Copie o código abaixo e pague no seu banco:</p>
                 
-                <div class="pix-code" id="pix-copy-paste" onclick="copyPix()">
-                    <!-- Código Pix Aqui -->
-                </div>
+                <div class="pix-code" id="pix-copy-paste" onclick="copyPix()"></div>
 
-                <button class="btn-action ready" onclick="copyPix()" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <button class="btn-primary" onclick="copyPix()">
                     <i data-lucide="copy" style="width: 20px; height: 20px;"></i>
                     Copiar Código
                 </button>
@@ -390,55 +777,272 @@
     </div>
 
     <script>
-        // CONFIG
-        const API_BASE = window.location.origin; // Usa a origem atual (ngrok ou localhost)
+        const API_BASE = window.location.origin;
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // STATE
         const state = {
             balance: 0,
             betPrice: 5.00,
             white: new Set(),
             red: new Set(),
-            telegramId: tg.initDataUnsafe?.user?.id || 123456789, // Fallback para teste
+            telegramId: tg.initDataUnsafe?.user?.id || 123456789,
+            currentStep: 1,
+            registered: false,
             pixInterval: null
         };
 
-        // CONSTANTS
         const LIMITS = { WHITE: 20, RED: 5 };
 
         // INIT
         document.addEventListener('DOMContentLoaded', () => {
-            renderGrids();
-            fetchUserData();
+            lucide.createIcons();
+            checkRegistration();
+            applyMasks();
+            setupValidation();
             fetchConfig();
+        });
+
+        // ==================== REGISTRATION CHECK ====================
+
+        async function checkRegistration() {
+            try {
+                const res = await fetch(`${API_BASE}/api/player/check-registration`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: state.telegramId })
+                });
+                const data = await res.json();
+                
+                if (data.cadastro_completo) {
+                    state.registered = true;
+                    showScreen(3);
+                    fetchUserData();
+                } else {
+                    showScreen(1);
+                }
+            } catch (e) {
+                console.error("Erro ao verificar cadastro", e);
+                showScreen(1);
+            }
+        }
+
+        // ==================== STEPPER ====================
+
+        function showScreen(step) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(`screen-${step}`).classList.add('active');
             
-            // Input listener para validação manual
-            document.getElementById('deposit-amount').addEventListener('input', (e) => {
-                document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+            // Update stepper
+            document.querySelectorAll('.step').forEach((s, i) => {
+                s.classList.remove('active', 'completed');
+                if (i + 1 < step) s.classList.add('completed');
+                if (i + 1 === step) s.classList.add('active');
             });
 
-            // Inicializar ícones Lucide
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
+            state.currentStep = step;
+
+            if (step === 3) {
+                document.getElementById('game-header').style.display = 'flex';
+                document.getElementById('game-footer').style.display = 'block';
+                if (!document.getElementById('grid-white').children.length) {
+                    renderGrids();
+                }
+                fetchUserData();
+            } else {
+                document.getElementById('game-header').style.display = 'none';
+                document.getElementById('game-footer').style.display = 'none';
             }
-        });
+
+            setTimeout(() => lucide.createIcons(), 100);
+        }
+
+        function nextStep(e, step) {
+            e.preventDefault();
+            
+            if (step === 3) {
+                // Salvar cadastro
+                saveRegistration().then(() => {
+                    showScreen(step);
+                });
+            } else {
+                showScreen(step);
+            }
+        }
+
+        function prevStep(step) {
+            showScreen(step);
+        }
+
+        async function saveRegistration() {
+            const data = {
+                action: 'cadastro_usuario',
+                nome: document.getElementById('nome').value.trim(),
+                cpf: document.getElementById('cpf').value.replace(/\D/g, ''),
+                pix: document.getElementById('pix').value.trim(),
+                telefone: document.getElementById('telefone').value.replace(/\D/g, ''),
+                cidade: document.getElementById('cidade').value.trim() || null,
+                estado: document.getElementById('estado').value || null
+            };
+
+            tg.sendData(JSON.stringify(data));
+            tg.showAlert('✅ Cadastro realizado com sucesso!');
+            tg.HapticFeedback.notificationOccurred('success');
+            state.registered = true;
+        }
+
+        // ==================== MASKS ====================
+
+        function applyMasks() {
+            const cpf = document.getElementById('cpf');
+            cpf.addEventListener('input', (e) => {
+                let val = e.target.value.replace(/\D/g, '');
+                if (val.length <= 11) {
+                    val = val.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, (m, p1, p2, p3, p4) => {
+                        let r = p1;
+                        if (p2) r += '.' + p2;
+                        if (p3) r += '.' + p3;
+                        if (p4) r += '-' + p4;
+                        return r;
+                    });
+                    e.target.value = val;
+                }
+                validateCPF(e.target);
+            });
+
+            const tel = document.getElementById('telefone');
+            tel.addEventListener('input', (e) => {
+                let val = e.target.value.replace(/\D/g, '');
+                if (val.length <= 11) {
+                    if (val.length <= 10) {
+                        val = val.replace(/(\d{2})(\d{4})(\d{0,4})/, (m, p1, p2, p3) => {
+                            return p1 ? '(' + p1 + ') ' + (p2 || '') + (p3 ? '-' + p3 : '') : val;
+                        });
+                } else {
+                        val = val.replace(/(\d{2})(\d{5})(\d{0,4})/, (m, p1, p2, p3) => {
+                            return p1 ? '(' + p1 + ') ' + (p2 || '') + (p3 ? '-' + p3 : '') : val;
+                        });
+                    }
+                    e.target.value = val;
+                }
+            });
+        }
+
+        // ==================== VALIDATION ====================
+
+        function setupValidation() {
+            const pix = document.getElementById('pix');
+            pix.addEventListener('input', () => validatePix(pix));
+            pix.addEventListener('blur', () => validatePix(pix));
+        }
+
+        function validateCPF(input) {
+            const cpf = input.value.replace(/\D/g, '');
+            const errorEl = document.getElementById('cpf-error');
+            const successEl = document.getElementById('cpf-success');
+            const helpEl = document.getElementById('cpf-help');
+
+            if (cpf.length === 0) {
+                input.classList.remove('error', 'success');
+                errorEl.style.display = 'none';
+                successEl.style.display = 'none';
+                helpEl.style.display = 'flex';
+                return false;
+            }
+
+            if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) {
+                input.classList.add('error');
+                input.classList.remove('success');
+                errorEl.style.display = 'flex';
+                successEl.style.display = 'none';
+                helpEl.style.display = 'none';
+                return false;
+            }
+
+            let soma = 0;
+            for (let i = 0; i < 9; i++) soma += parseInt(cpf.charAt(i)) * (10 - i);
+            let resto = 11 - (soma % 11);
+            let digito1 = resto >= 10 ? 0 : resto;
+
+            soma = 0;
+            for (let i = 0; i < 10; i++) soma += parseInt(cpf.charAt(i)) * (11 - i);
+            resto = 11 - (soma % 11);
+            let digito2 = resto >= 10 ? 0 : resto;
+
+            const isValid = digito1 === parseInt(cpf.charAt(9)) && digito2 === parseInt(cpf.charAt(10));
+
+            if (isValid) {
+                input.classList.remove('error');
+                input.classList.add('success');
+                errorEl.style.display = 'none';
+                successEl.style.display = 'flex';
+                helpEl.style.display = 'none';
+                return true;
+            } else {
+                input.classList.add('error');
+                input.classList.remove('success');
+                errorEl.style.display = 'flex';
+                successEl.style.display = 'none';
+                helpEl.style.display = 'none';
+                return false;
+            }
+        }
+
+        function validatePix(input) {
+            const pix = input.value.trim();
+            const errorEl = document.getElementById('pix-error');
+            const successEl = document.getElementById('pix-success');
+            const helpEl = document.getElementById('pix-help');
+
+            if (pix.length === 0) {
+                input.classList.remove('error', 'success');
+                errorEl.style.display = 'none';
+                successEl.style.display = 'none';
+                helpEl.style.display = 'flex';
+                return false;
+            }
+
+            // Validação básica de PIX
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+            const cpfRegex = /^\d{11}$/;
+            const randomKeyRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+            const cleanPix = pix.replace(/\D/g, '');
+            const isValid = emailRegex.test(pix) || 
+                          phoneRegex.test(cleanPix) || 
+                          cpfRegex.test(cleanPix) || 
+                          randomKeyRegex.test(pix) ||
+                          pix.length >= 10;
+
+            if (isValid) {
+                input.classList.remove('error');
+                input.classList.add('success');
+                errorEl.style.display = 'none';
+                successEl.style.display = 'flex';
+                helpEl.style.display = 'none';
+                return true;
+            } else {
+                input.classList.add('error');
+                input.classList.remove('success');
+                errorEl.style.display = 'flex';
+                document.getElementById('pix-error-text').textContent = 'Chave Pix inválida';
+                successEl.style.display = 'none';
+                helpEl.style.display = 'none';
+                return false;
+            }
+        }
 
         // ==================== API CALLS ====================
 
         async function fetchUserData() {
             try {
-                // Simulação de chamada de API para saldo
                 const res = await fetch(`${API_BASE}/finance/balance/${state.telegramId}`);
                 const data = await res.json();
                 state.balance = data.saldo || 0;
-                updateUI();
+                updateGameUI();
             } catch (e) {
                 console.error("Erro ao buscar saldo", e);
-                // Fallback para teste visual se API falhar
-                // state.balance = 0; 
-                updateUI();
             }
         }
 
@@ -447,81 +1051,19 @@
                 const res = await fetch(`${API_BASE}/api/player/config/bet-price`);
                 const data = await res.json();
                 state.betPrice = data.preco || 5.00;
-                document.getElementById('bet-cost').textContent = formatCurrency(state.betPrice);
-                updateUI();
+                document.getElementById('bet-price').textContent = formatCurrency(state.betPrice);
+                updateGameUI();
             } catch (e) {
                 console.error("Erro config", e);
             }
         }
 
-        async function submitBet() {
-            if (!validateBetState()) return;
-
-            const btn = document.getElementById('btn-action');
-            const originalText = btn.innerText;
-            btn.innerHTML = '<div class="loader"></div>';
-            btn.disabled = true;
-
-            try {
-                const payload = {
-                    white: Array.from(state.white),
-                    red: Array.from(state.red),
-                    action: 'aposta_realizada'
-                };
-
-                // Envia dados para o Bot via WebApp
-                tg.sendData(JSON.stringify(payload));
-                
-                // Feedback visual antes de fechar (opcional, pois sendData fecha o app geralmente)
-                tg.HapticFeedback.notificationOccurred('success');
-                
-            } catch (e) {
-                console.error(e);
-                tg.showAlert("Erro ao processar aposta.");
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
-        }
-
-        async function generatePix() {
-            const amount = parseFloat(document.getElementById('deposit-amount').value);
-            if (!amount || amount < 5) {
-                tg.showAlert("O valor mínimo é R$ 5,00");
-                return;
-            }
-
-            const btn = document.querySelector('#step-amount .btn-action');
-            btn.innerHTML = '<div class="loader"></div>';
-            
-            try {
-                const res = await fetch(`${API_BASE}/finance/deposit`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telegram_id: state.telegramId, valor: amount })
-                });
-                
-                const data = await res.json();
-                
-                if (res.ok) {
-                    showPixScreen(data.pix_code);
-                    startPixPolling(data.payment_id); // Assumindo que retorna ID
-                } else {
-                    tg.showAlert("Erro ao gerar Pix: " + (data.detail || "Tente novamente."));
-                }
-            } catch (e) {
-                tg.showAlert("Erro de conexão.");
-            } finally {
-                btn.innerText = "Gerar Pix";
-            }
-        }
-
-        // ==================== UI LOGIC ====================
+        // ==================== GAME LOGIC ====================
 
         function renderGrids() {
             const gridWhite = document.getElementById('grid-white');
             const gridRed = document.getElementById('grid-red');
 
-            // Render White (1-69)
             for (let i = 1; i <= 69; i++) {
                 const el = document.createElement('div');
                 el.className = 'ball white';
@@ -530,7 +1072,6 @@
                 gridWhite.appendChild(el);
             }
 
-            // Render Red (1-26)
             for (let i = 1; i <= 26; i++) {
                 const el = document.createElement('div');
                 el.className = 'ball red';
@@ -557,11 +1098,35 @@
                     tg.HapticFeedback.notificationOccurred('error');
                 }
             }
-            updateUI();
+            updateGameUI();
         }
 
-        function updateUI() {
-            // Update Counters
+        function gerarSurpresinha() {
+            document.querySelectorAll('.ball').forEach(b => b.classList.remove('selected-white', 'selected-red'));
+            state.white.clear();
+            state.red.clear();
+
+            while(state.white.size < LIMITS.WHITE) {
+                let r = Math.floor(Math.random() * 69) + 1;
+                state.white.add(r);
+            }
+
+            while(state.red.size < LIMITS.RED) {
+                let r = Math.floor(Math.random() * 26) + 1;
+                state.red.add(r);
+            }
+
+            const whiteBalls = document.getElementById('grid-white').children;
+            state.white.forEach(num => whiteBalls[num-1].classList.add('selected'));
+
+            const redBalls = document.getElementById('grid-red').children;
+            state.red.forEach(num => redBalls[num-1].classList.add('selected'));
+
+            updateGameUI();
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+
+        function updateGameUI() {
             const cw = document.getElementById('counter-white');
             const cr = document.getElementById('counter-red');
             
@@ -571,10 +1136,14 @@
             cw.className = `counter ${state.white.size === LIMITS.WHITE ? 'full' : ''}`;
             cr.className = `counter ${state.red.size === LIMITS.RED ? 'full' : ''}`;
 
-            // Update Balance
             document.getElementById('user-balance').textContent = formatCurrency(state.balance);
 
-            // Update Action Button
+            // Update summary
+            const totalSelected = state.white.size + state.red.size;
+            document.getElementById('summary-selected').textContent = `${totalSelected}/25`;
+            document.getElementById('summary-price').textContent = formatCurrency(state.betPrice);
+
+            // Update action button
             const btn = document.getElementById('btn-action');
             const isFull = state.white.size === LIMITS.WHITE && state.red.size === LIMITS.RED;
             const hasFunds = state.balance >= state.betPrice;
@@ -585,14 +1154,40 @@
                 btn.classList.remove('ready');
             } else if (!hasFunds) {
                 btn.textContent = `Saldo Insuficiente (Faltam ${formatCurrency(state.betPrice - state.balance)})`;
-                btn.disabled = false; // Permite clicar para depositar (lógica opcional)
+                btn.disabled = false;
                 btn.classList.remove('ready');
-                btn.onclick = openDepositModal; // Redireciona para depósito
+                btn.onclick = openDepositModal;
             } else {
                 btn.textContent = `CONFIRMAR APOSTA (${formatCurrency(state.betPrice)})`;
                 btn.disabled = false;
                 btn.classList.add('ready');
                 btn.onclick = submitBet;
+            }
+        }
+
+        async function submitBet() {
+            if (!validateBetState()) return;
+
+            const btn = document.getElementById('btn-action');
+            const originalText = btn.innerText;
+            btn.innerHTML = '<div class="loader"></div>';
+            btn.disabled = true;
+
+            try {
+                const payload = {
+                    white: Array.from(state.white),
+                    red: Array.from(state.red),
+                action: 'aposta_realizada'
+            };
+
+                tg.sendData(JSON.stringify(payload));
+                tg.HapticFeedback.notificationOccurred('success');
+                
+            } catch (e) {
+                console.error(e);
+                tg.showAlert("Erro ao processar aposta.");
+                btn.innerText = originalText;
+                btn.disabled = false;
             }
         }
 
@@ -602,7 +1197,7 @@
                    state.balance >= state.betPrice;
         }
 
-        // ==================== MODAL LOGIC ====================
+        // ==================== DEPOSIT MODAL ====================
 
         function openDepositModal() {
             document.getElementById('deposit-modal').classList.add('open');
@@ -618,10 +1213,41 @@
 
         function setAmount(val) {
             document.getElementById('deposit-amount').value = val;
-            // Highlight selected chip
             document.querySelectorAll('.chip').forEach(c => {
                 c.classList.toggle('selected', c.textContent.includes(val));
             });
+        }
+
+        async function generatePix() {
+            const amount = parseFloat(document.getElementById('deposit-amount').value);
+            if (!amount || amount < 5) {
+                tg.showAlert("O valor mínimo é R$ 5,00");
+                return;
+            }
+
+            const btn = document.querySelector('#step-amount .btn-primary');
+            btn.innerHTML = '<div class="loader"></div>';
+            
+            try {
+                const res = await fetch(`${API_BASE}/finance/deposit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: state.telegramId, valor: amount })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    showPixScreen(data.pix_code);
+                } else {
+                    tg.showAlert("Erro ao gerar Pix: " + (data.detail || "Tente novamente."));
+                }
+            } catch (e) {
+                tg.showAlert("Erro de conexão.");
+            } finally {
+                btn.innerHTML = `Gerar Pix <i data-lucide="qrcode" style="width: 20px; height: 20px;"></i>`;
+                setTimeout(() => lucide.createIcons(), 100);
+            }
         }
 
         function showPixScreen(code) {
@@ -637,29 +1263,11 @@
             tg.showAlert("Código Pix copiado!");
         }
 
-        function startPixPolling(paymentId) {
-            // Simulação de Polling (em produção, chame endpoint de status)
-            // Aqui estamos apenas atualizando o saldo se o usuário fechar e abrir
-            
-            // Exemplo real seria:
-            /*
-            state.pixInterval = setInterval(async () => {
-                const res = await fetch(`${API_BASE}/finance/status/${paymentId}`);
-                if (res.paid) {
-                    tg.showAlert("Pagamento Confirmado! 💰");
-                    closeDepositModal();
-                    fetchUserData();
-                }
-            }, 3000);
-            */
-        }
-
         // ==================== UTILS ====================
 
         function formatCurrency(val) {
             return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
-
     </script>
 </body>
 </html>
