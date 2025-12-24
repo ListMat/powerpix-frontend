@@ -1239,6 +1239,31 @@
         </div>
     </div>
 
+    <div id="missing-pix-alert"
+        style="background: rgba(245, 158, 11, 0.1); border: 1px solid var(--warning); padding: 15px; border-radius: 12px; margin: 20px; display: none; position: relative;">
+        <button onclick="this.parentElement.style.display='none'"
+            style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--text-muted); cursor: pointer;">
+            <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+        </button>
+        <div style="display: flex; gap: 10px; align-items: start;">
+            <i data-lucide="alert-triangle" style="min-width: 20px; height: 20px; color: var(--warning);"></i>
+            <div>
+                <h4 style="margin: 0 0 5px; color: var(--warning);">Cadastre sua Chave Pix (Opcional)</h4>
+                <p style="margin: 0 0 10px; font-size: 0.85rem; color: var(--text-muted);">Você pode cadastrar sua chave
+                    Pix agora ou depois no seu perfil para receber prêmios.</p>
+
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <input type="text" class="form-input" id="home-pix-input" placeholder="Digite sua chave Pix"
+                        style="padding: 10px;">
+                </div>
+                <button class="btn-primary" onclick="savePixFromHome()"
+                    style="margin-top: 0; padding: 10px; font-size: 0.9rem;">
+                    Salvar Pix
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = window.location.origin;
         const tg = window.Telegram.WebApp;
