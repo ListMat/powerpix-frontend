@@ -1795,10 +1795,23 @@
         async function loadProfileData() {
             try {
                 const res = await fetch(`${API_BASE}/api/player/profile/${state.telegramId}`);
+                
+                if (!res.ok) {
+                    const errorData = await res.json().catch(() => ({ detail: res.statusText }));
+                    console.error("Erro ao carregar perfil:", errorData);
+                    tg.showAlert(`Erro ao carregar dados do perfil: ${errorData.detail || res.statusText}`);
+                    return;
+                }
+                
                 const data = await res.json();
                 profileData = data;
                 
                 const container = document.getElementById('profile-data');
+                if (!container) {
+                    console.error("Elemento profile-data não encontrado");
+                    return;
+                }
+                
                 container.innerHTML = `
                     <div class="info-item">
                         <span class="info-label">Nome</span>
@@ -1826,16 +1839,16 @@
                     </div>
                     <div class="info-item">
                         <span class="info-label">Saldo</span>
-                        <span class="info-value" style="color: var(--primary);">${formatCurrency(data.saldo)}</span>
+                        <span class="info-value" style="color: var(--primary);">${formatCurrency(data.saldo || 0)}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Data de Cadastro</span>
-                        <span class="info-value">${new Date(data.data_cadastro).toLocaleDateString('pt-BR')}</span>
+                        <span class="info-value">${data.data_cadastro ? new Date(data.data_cadastro).toLocaleDateString('pt-BR') : 'Não informado'}</span>
                     </div>
                 `;
             } catch (e) {
                 console.error("Erro ao carregar perfil", e);
-                tg.showAlert("Erro ao carregar dados do perfil");
+                tg.showAlert(`Erro ao carregar dados do perfil: ${e.message || 'Erro desconhecido'}`);
             }
         }
 

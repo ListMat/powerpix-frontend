@@ -614,7 +614,12 @@ async def get_profile(telegram_id: int):
             usuario = result.scalar_one_or_none()
             
             if not usuario:
+                logger.warning(f"Usuário não encontrado: telegram_id={telegram_id}")
                 raise HTTPException(status_code=404, detail="Usuário não encontrado")
+            
+            # Validar dados antes de retornar
+            if not usuario.nome:
+                logger.warning(f"Usuário sem nome: telegram_id={telegram_id}")
             
             return ProfileResponse(
                 telegram_id=usuario.telegram_id,
@@ -624,16 +629,16 @@ async def get_profile(telegram_id: int):
                 telefone=usuario.telefone,
                 cidade=usuario.cidade,
                 estado=usuario.estado,
-                saldo=usuario.saldo,
+                saldo=float(usuario.saldo) if usuario.saldo is not None else 0.0,
                 data_cadastro=usuario.data_cadastro.isoformat() if usuario.data_cadastro else "",
-                cadastro_completo=usuario.cadastro_completo or False,
-                is_archived=usuario.is_archived or False
+                cadastro_completo=bool(usuario.cadastro_completo) if usuario.cadastro_completo is not None else False,
+                is_archived=bool(usuario.is_archived) if usuario.is_archived is not None else False
             )
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Erro ao buscar perfil: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail="Erro ao buscar perfil")
+            logger.error(f"Erro ao buscar perfil (telegram_id={telegram_id}): {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Erro ao buscar perfil: {str(e)}")
 
 
 class ArchiveAccountRequest(BaseModel):

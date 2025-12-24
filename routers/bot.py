@@ -384,59 +384,70 @@ async def handle_cadastro_usuario(message: types.Message, data: dict):
             return
         
         async with AsyncSessionLocal() as session:
-            # Buscar usuário existente
-            result = await session.execute(
-                select(Usuario).where(Usuario.telegram_id == message.from_user.id)
-            )
-            usuario = result.scalar_one_or_none()
-            
-            if not usuario:
-                # Criar novo usuário
-                usuario = Usuario(
-                    telegram_id=message.from_user.id,
-                    nome=nome,
-                    cpf=cpf,
-                    pix=pix,
-                    telefone=telefone,
-                    cidade=cidade,
-                    estado=estado,
-                    cadastro_completo=True
+            try:
+                # Buscar usuário existente
+                result = await session.execute(
+                    select(Usuario).where(Usuario.telegram_id == message.from_user.id)
                 )
-                session.add(usuario)
-            else:
-                # Atualizar dados do usuário existente
-                usuario.nome = nome
-                usuario.cpf = cpf
-                usuario.pix = pix
-                usuario.telefone = telefone
-                usuario.cidade = cidade
-                usuario.estado = estado
-                usuario.cadastro_completo = True
-            
-            # Baixar foto de perfil se não tiver
-            if not usuario.photo_url:
-                try:
-                    photo_url = await download_user_photo(bot, message.from_user.id)
-                    if photo_url:
-                        usuario.photo_url = photo_url
-                except Exception as e:
-                    logger.error(f"Erro ao baixar foto no cadastro: {e}", exc_info=True)
-            
-            await session.commit()
-            
-            await message.answer(
-                f"✅ Cadastro realizado com sucesso!\n\n"
-                f"👤 Nome: {nome}\n"
-                f"📄 CPF: {cpf}\n"
-                f"📱 Telefone: {telefone}\n"
-                f"💰 PIX: {pix}\n\n"
-                f"Agora você pode fazer depósitos e apostas! 🎲"
-            )
-            logger.info(f"Usuário {message.from_user.id} cadastrado/atualizado com sucesso")
+                usuario = result.scalar_one_or_none()
+                
+                if not usuario:
+                    # Criar novo usuário
+                    usuario = Usuario(
+                        telegram_id=message.from_user.id,
+                        nome=nome,
+                        cpf=cpf,
+                        pix=pix,
+                        telefone=telefone,
+                        cidade=cidade,
+                        estado=estado,
+                        cadastro_completo=True
+                    )
+                    session.add(usuario)
+                    await session.flush()  # Para obter o ID antes do commit
+                else:
+                    # Atualizar dados do usuário existente
+                    usuario.nome = nome
+                    usuario.cpf = cpf
+                    usuario.pix = pix
+                    usuario.telefone = telefone
+                    usuario.cidade = cidade
+                    usuario.estado = estado
+                    usuario.cadastro_completo = True
+                
+                # Baixar foto de perfil se não tiver (não bloqueia o cadastro se falhar)
+                if not usuario.photo_url:
+                    try:
+                        photo_url = await download_user_photo(bot, message.from_user.id)
+                        if photo_url:
+                            usuario.photo_url = photo_url
+                    except Exception as e:
+                        logger.error(f"Erro ao baixar foto no cadastro: {e}", exc_info=True)
+                        # Não bloquear o cadastro se a foto falhar
+                
+                await session.commit()
+                
+                # Refresh para garantir que os dados estão atualizados
+                await session.refresh(usuario)
+                
+                await message.answer(
+                    f"✅ Cadastro realizado com sucesso!\n\n"
+                    f"👤 Nome: {nome}\n"
+                    f"📄 CPF: {cpf}\n"
+                    f"📱 Telefone: {telefone}\n"
+                    f"💰 PIX: {pix}\n\n"
+                    f"Agora você pode fazer depósitos e apostas! 🎲"
+                )
+                logger.info(f"Usuário {message.from_user.id} cadastrado/atualizado com sucesso (ID: {usuario.id})")
+                
+            except Exception as e:
+                await session.rollback()
+                logger.error(f"Erro ao processar cadastro (telegram_id={message.from_user.id}): {e}", exc_info=True)
+                await message.answer("❌ Ocorreu um erro ao processar seu cadastro. Tente novamente.")
+                raise
             
     except Exception as e:
-        await message.answer("❌ Ocorreu um erro ao processar seu cadastro. Tente novamente.")
-        logger.error(f"Erro ao processar cadastro: {e}", exc_info=True)
+        logger.error(f"Erro externo ao processar cadastro: {e}", exc_info=True)
 
 
 @router.post("/webhook/{token}")
