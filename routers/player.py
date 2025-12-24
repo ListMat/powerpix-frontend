@@ -162,9 +162,14 @@ async def register(request: RegisterRequest):
             
             if usuario:
                 # Atualizar existente
+                # Atualizar existente
                 usuario.nome = request.nome
-                usuario.cpf = request.cpf
+                usuario.cpf = request.cpf.replace(".", "").replace("-", "").strip() if request.cpf else None
                 usuario.pix = request.pix
+                usuario.telefone = request.telefone.replace("(", "").replace(")", "").replace(" ", "").replace("-", "").strip() if request.telefone else None
+                usuario.cidade = request.cidade
+                usuario.estado = request.estado
+                usuario.cadastro_completo = True
                 usuario.telefone = request.telefone
                 usuario.cidade = request.cidade
                 usuario.estado = request.estado
@@ -179,9 +184,9 @@ async def register(request: RegisterRequest):
                 usuario = Usuario(
                     telegram_id=request.telegram_id,
                     nome=request.nome,
-                    cpf=request.cpf,
+                    cpf=request.cpf.replace(".", "").replace("-", "").strip() if request.cpf else None,
                     pix=request.pix,
-                    telefone=request.telefone,
+                    telefone=request.telefone.replace("(", "").replace(")", "").replace(" ", "").replace("-", "").strip() if request.telefone else None,
                     cidade=request.cidade,
                     estado=request.estado,
                     cadastro_completo=True,
