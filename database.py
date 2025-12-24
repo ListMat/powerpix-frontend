@@ -78,6 +78,9 @@ class Usuario(Base):
     is_archived = Column(Boolean, default=False, nullable=False)
     data_arquivamento = Column(DateTime, nullable=True)
     
+    # Foto de perfil do usuário
+    photo_url = Column(String(255), nullable=True)  # Caminho relativo para a foto (ex: /static/avatars/123456.jpg)
+    
     apostas = relationship("Aposta", back_populates="usuario")
     transacoes = relationship("Transacao", back_populates="usuario", cascade="all, delete-orphan")
 
@@ -261,7 +264,8 @@ async def init_db():
                 ('cadastro_completo', 'BOOLEAN', 'FALSE'),
                 ('cpf', 'VARCHAR(14)', None),
                 ('is_archived', 'BOOLEAN', 'FALSE'),
-                ('data_arquivamento', 'TIMESTAMP', None)
+                ('data_arquivamento', 'TIMESTAMP', None),
+                ('photo_url', 'VARCHAR(255)', None)
             ]:
                 result = await conn.execute(
                     text(f"""

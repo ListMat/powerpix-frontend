@@ -11,6 +11,7 @@ from database import (
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from config import get_settings
+from services.user_photo import download_user_photo
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -54,6 +55,16 @@ async def cmd_start(message: types.Message):
             )
             await message.answer("Clique no botão para começar:", reply_markup=keyboard)
             return
+        
+        # Se usuário existe e tem cadastro completo, atualizar foto se necessário
+        if usuario and not usuario.photo_url:
+            try:
+                photo_url = await download_user_photo(bot, message.from_user.id)
+                if photo_url:
+                    usuario.photo_url = photo_url
+                    await session.commit()
+            except Exception as e:
+                logger.error(f"Erro ao baixar foto no /start: {e}", exc_info=True)
     
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -401,6 +412,15 @@ async def handle_cadastro_usuario(message: types.Message, data: dict):
                 usuario.cidade = cidade
                 usuario.estado = estado
                 usuario.cadastro_completo = True
+            
+            # Baixar foto de perfil se não tiver
+            if not usuario.photo_url:
+                try:
+                    photo_url = await download_user_photo(bot, message.from_user.id)
+                    if photo_url:
+                        usuario.photo_url = photo_url
+                except Exception as e:
+                    logger.error(f"Erro ao baixar foto no cadastro: {e}", exc_info=True)
             
             await session.commit()
             

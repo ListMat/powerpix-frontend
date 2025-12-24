@@ -680,6 +680,7 @@ async def detalhes_concurso(
             "id": aposta.id,
             "usuario": aposta.usuario.nome if aposta.usuario else "Desconhecido",
             "telegram_id": aposta.usuario.telegram_id if aposta.usuario else None,
+            "photo_url": aposta.usuario.photo_url if aposta.usuario else None,
             "numeros_brancos": numeros_brancos,
             "numeros_vermelhos": numeros_vermelhos,
             "valor_pago": aposta.valor_pago,
