@@ -4,6 +4,8 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 import json
 import logging
+import os
+from pathlib import Path
 from database import (
     AsyncSessionLocal, Usuario, Sorteio, Aposta, StatusSorteio, SystemConfig, 
     Transacao, TipoTransacao, StatusTransacao, Concurso, StatusConcurso
@@ -12,6 +14,20 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from config import get_settings
 from services.user_photo import download_user_photo
+
+# Configurar caminho do log
+LOG_DIR = Path(__file__).parent.parent / ".cursor"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_PATH = LOG_DIR / "debug.log"
+# #region agent log
+try:
+    import time
+    log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:21", "message": "module loaded", "data": {"log_path": str(LOG_PATH)}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}
+    with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+except Exception as e: 
+    import logging
+    logging.error(f"Erro ao escrever log inicial: {e}")
+# #endregion
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -199,15 +215,43 @@ async def cmd_meus_jogos(message: types.Message):
 @dp.message(lambda message: message.web_app_data is not None)
 async def handle_web_app_data(message: types.Message):
     """Handler para receber dados do Mini App"""
+    # #region agent log
+    try:
+        import time
+        log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:201", "message": "web_app_data received", "data": {"telegram_id": message.from_user.id, "has_data": message.web_app_data is not None}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}
+        with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+    except Exception as e: logger.error(f"Erro ao escrever log: {e}")
+    # #endregion
     try:
         # Parsear JSON recebido
         data_str = message.web_app_data.data
+        # #region agent log
+        try:
+            import time
+            log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:206", "message": "data_str parsed", "data": {"telegram_id": message.from_user.id, "data_str_length": len(data_str), "data_str_preview": data_str[:100]}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}
+            with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        except Exception as e: logger.error(f"Erro ao escrever log: {e}")
+        # #endregion
         data = json.loads(data_str)
         
         action = data.get("action")
+        # #region agent log
+        try:
+            import time
+            log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:208", "message": "action extracted", "data": {"telegram_id": message.from_user.id, "action": action, "data_keys": list(data.keys())}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}
+            with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        except Exception as e: logger.error(f"Erro ao escrever log: {e}")
+        # #endregion
         
         # Handler para cadastro de usuário
         if action == "cadastro_usuario":
+            # #region agent log
+            try:
+                import time
+                log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:211", "message": "calling handle_cadastro_usuario", "data": {"telegram_id": message.from_user.id}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}
+                with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            except Exception as e: logger.error(f"Erro ao escrever log: {e}")
+            # #endregion
             await handle_cadastro_usuario(message, data)
             return
         
@@ -370,6 +414,13 @@ async def handle_web_app_data(message: types.Message):
 
 async def handle_cadastro_usuario(message: types.Message, data: dict):
     """Handler para processar cadastro de usuário"""
+    # #region agent log
+    try:
+        import time
+        log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:406", "message": "handle_cadastro_usuario entry", "data": {"telegram_id": message.from_user.id, "data_keys": list(data.keys())}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}
+        with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+    except Exception as e: logger.error(f"Erro ao escrever log: {e}")
+    # #endregion
     try:
         nome = data.get("nome", "").strip()
         cpf = data.get("cpf", "").strip()
@@ -378,20 +429,65 @@ async def handle_cadastro_usuario(message: types.Message, data: dict):
         cidade = data.get("cidade", "").strip() or None
         estado = data.get("estado", "").strip() or None
         
+        # #region agent log
+        try:
+            import time
+            log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:380", "message": "data extracted", "data": {"nome": bool(nome), "cpf": bool(cpf), "pix": bool(pix), "telefone": bool(telefone), "cidade": cidade is not None, "estado": estado is not None}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "C"}
+            with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        except: pass
+        # #endregion
+        
         # Validações
         if not nome or not cpf or not pix or not telefone:
+            # #region agent log
+            try:
+                import time
+                log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:383", "message": "validation failed", "data": {"nome": bool(nome), "cpf": bool(cpf), "pix": bool(pix), "telefone": bool(telefone)}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "C"}
+                with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            except: pass
+            # #endregion
             await message.answer("❌ Erro: Nome, CPF, PIX e Telefone são obrigatórios.")
             return
         
+        # #region agent log
+        try:
+            import time
+            log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:386", "message": "before database session", "data": {"telegram_id": message.from_user.id}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}
+            with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        except: pass
+        # #endregion
+        
         async with AsyncSessionLocal() as session:
             try:
+                # #region agent log
+                try:
+                    import time
+                    log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:389", "message": "database session created", "data": {"telegram_id": message.from_user.id}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}
+                    with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                except: pass
+                # #endregion
                 # Buscar usuário existente
                 result = await session.execute(
                     select(Usuario).where(Usuario.telegram_id == message.from_user.id)
                 )
                 usuario = result.scalar_one_or_none()
                 
+                # #region agent log
+                try:
+                    import time
+                    log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:393", "message": "user lookup result", "data": {"telegram_id": message.from_user.id, "usuario_exists": usuario is not None, "usuario_id": usuario.id if usuario else None}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "D"}
+                    with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                except: pass
+                # #endregion
+                
                 if not usuario:
+                    # #region agent log
+                    try:
+                        import time
+                        log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:395", "message": "creating new user", "data": {"telegram_id": message.from_user.id, "nome": nome[:20], "cpf_len": len(cpf), "pix_len": len(pix)}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "B"}
+                        with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                    except: pass
+                    # #endregion
                     # Criar novo usuário
                     usuario = Usuario(
                         telegram_id=message.from_user.id,
@@ -404,8 +500,29 @@ async def handle_cadastro_usuario(message: types.Message, data: dict):
                         cadastro_completo=True
                     )
                     session.add(usuario)
+                    # #region agent log
+                    try:
+                        import time
+                        log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:407", "message": "before flush", "data": {"telegram_id": message.from_user.id}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "B"}
+                        with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                    except: pass
+                    # #endregion
                     await session.flush()  # Para obter o ID antes do commit
+                    # #region agent log
+                    try:
+                        import time
+                        log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:407", "message": "after flush", "data": {"telegram_id": message.from_user.id, "usuario_id": usuario.id if hasattr(usuario, 'id') else None}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "B"}
+                        with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                    except: pass
+                    # #endregion
                 else:
+                    # #region agent log
+                    try:
+                        import time
+                        log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:409", "message": "updating existing user", "data": {"telegram_id": message.from_user.id, "usuario_id": usuario.id}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "B"}
+                        with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                    except: pass
+                    # #endregion
                     # Atualizar dados do usuário existente
                     usuario.nome = nome
                     usuario.cpf = cpf
@@ -425,10 +542,31 @@ async def handle_cadastro_usuario(message: types.Message, data: dict):
                         logger.error(f"Erro ao baixar foto no cadastro: {e}", exc_info=True)
                         # Não bloquear o cadastro se a foto falhar
                 
+                # #region agent log
+                try:
+                    import time
+                    log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:428", "message": "before commit", "data": {"telegram_id": message.from_user.id, "usuario_id": usuario.id if hasattr(usuario, 'id') else None}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "B"}
+                    with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                except: pass
+                # #endregion
                 await session.commit()
+                # #region agent log
+                try:
+                    import time
+                    log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:428", "message": "after commit", "data": {"telegram_id": message.from_user.id, "usuario_id": usuario.id if hasattr(usuario, 'id') else None}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "B"}
+                    with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                except: pass
+                # #endregion
                 
                 # Refresh para garantir que os dados estão atualizados
                 await session.refresh(usuario)
+                # #region agent log
+                try:
+                    import time
+                    log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:431", "message": "after refresh", "data": {"telegram_id": message.from_user.id, "usuario_id": usuario.id, "cadastro_completo": usuario.cadastro_completo, "nome": usuario.nome[:20] if usuario.nome else None}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "B"}
+                    with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                except: pass
+                # #endregion
                 
                 await message.answer(
                     f"✅ Cadastro realizado com sucesso!\n\n"
@@ -439,29 +577,93 @@ async def handle_cadastro_usuario(message: types.Message, data: dict):
                     f"Agora você pode fazer depósitos e apostas! 🎲"
                 )
                 logger.info(f"Usuário {message.from_user.id} cadastrado/atualizado com sucesso (ID: {usuario.id})")
+                # #region agent log
+                try:
+                    import time
+                    log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:441", "message": "registration success", "data": {"telegram_id": message.from_user.id, "usuario_id": usuario.id}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "B"}
+                    with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                except: pass
+                # #endregion
                 
             except Exception as e:
+                # #region agent log
+                try:
+                    import time
+                    log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:443", "message": "exception in session", "data": {"telegram_id": message.from_user.id, "error_type": type(e).__name__, "error_message": str(e)[:200]}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "E"}
+                    with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                except: pass
+                # #endregion
                 await session.rollback()
                 logger.error(f"Erro ao processar cadastro (telegram_id={message.from_user.id}): {e}", exc_info=True)
                 await message.answer("❌ Ocorreu um erro ao processar seu cadastro. Tente novamente.")
                 raise
             
     except Exception as e:
+        # #region agent log
+        try:
+            import time
+            log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:449", "message": "external exception", "data": {"telegram_id": message.from_user.id if message and message.from_user else None, "error_type": type(e).__name__, "error_message": str(e)[:200]}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "E"}
+            with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        except: pass
+        # #endregion
         logger.error(f"Erro externo ao processar cadastro: {e}", exc_info=True)
 
 
 @router.post("/webhook/{token}")
 async def webhook_handler(token: str, request: Request):
     """Endpoint para receber updates do Telegram"""
+    # #region agent log
+    try:
+        import time
+        log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:603", "message": "webhook received", "data": {"token_received": token[:10] + "..." if len(token) > 10 else token}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}
+        with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+    except Exception as e: logger.error(f"Erro ao escrever log: {e}")
+    # #endregion
     if token != settings.BOT_TOKEN:
+        # #region agent log
+        try:
+            import time
+            log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:607", "message": "invalid token", "data": {}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}
+            with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        except Exception as e: logger.error(f"Erro ao escrever log: {e}")
+        # #endregion
         raise HTTPException(status_code=403, detail="Invalid token")
     
     try:
         update_data = await request.json()
+        # #region agent log
+        try:
+            import time
+            has_web_app_data = "message" in update_data and "web_app_data" in update_data.get("message", {})
+            log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:612", "message": "update_data parsed", "data": {"update_id": update_data.get("update_id"), "has_message": "message" in update_data, "has_web_app_data": has_web_app_data}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}
+            with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        except Exception as e: logger.error(f"Erro ao escrever log: {e}")
+        # #endregion
         update = types.Update(**update_data)
+        # #region agent log
+        try:
+            import time
+            log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:614", "message": "before feed_update", "data": {}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}
+            with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        except Exception as e: logger.error(f"Erro ao escrever log: {e}")
+        # #endregion
         await dp.feed_update(bot=bot, update=update)
+        # #region agent log
+        try:
+            import time
+            log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:614", "message": "after feed_update", "data": {}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A"}
+            with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        except Exception as e: logger.error(f"Erro ao escrever log: {e}")
+        # #endregion
         return {"ok": True}
     except Exception as e:
+        # #region agent log
+        try:
+            import time
+            log_entry = {"id": f"log_{int(time.time() * 1000)}", "timestamp": int(time.time() * 1000), "location": "routers/bot.py:616", "message": "webhook exception", "data": {"error_type": type(e).__name__, "error_message": str(e)[:200]}, "sessionId": "debug-session", "runId": "run1", "hypothesisId": "E"}
+            with open(LOG_PATH, "a", encoding="utf-8") as f: f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        except Exception as e2: logger.error(f"Erro ao escrever log: {e2}")
+        # #endregion
         logger.error(f"Erro no webhook: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Webhook processing failed")
 

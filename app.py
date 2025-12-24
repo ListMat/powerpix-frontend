@@ -32,10 +32,25 @@ async def lifespan(app: FastAPI):
         from routers.bot import bot
         webhook_url = f"{settings.WEBHOOK_URL}{settings.WEBHOOK_PATH}/{settings.BOT_TOKEN}"
         try:
+            # Verificar webhook atual antes de configurar
+            current_webhook = await bot.get_webhook_info()
+            logger.info(f"Webhook atual: {current_webhook.url if current_webhook.url else 'Nenhum'}")
+            
             await bot.set_webhook(webhook_url)
-            logger.info(f"Webhook configurado: {webhook_url}")
+            logger.info(f"✅ Webhook configurado com sucesso: {webhook_url}")
+            
+            # Verificar se foi configurado corretamente
+            verify_webhook = await bot.get_webhook_info()
+            if verify_webhook.url == webhook_url:
+                logger.info(f"✅ Webhook verificado: {verify_webhook.url}")
+            else:
+                logger.warning(f"⚠️ Webhook pode não estar configurado corretamente. Esperado: {webhook_url}, Atual: {verify_webhook.url}")
         except Exception as e:
-            logger.error(f"Erro ao configurar webhook: {e}")
+            logger.error(f"❌ Erro ao configurar webhook: {e}", exc_info=True)
+    else:
+        logger.warning("⚠️ WEBHOOK_URL não configurado! O bot não receberá updates do Telegram.")
+        logger.warning("⚠️ Configure WEBHOOK_URL no .env ou use polling para desenvolvimento.")
+        logger.warning("⚠️ Sem webhook ou polling, o cadastro de jogadores não funcionará!")
     
     yield
     

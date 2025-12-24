@@ -64,6 +64,17 @@ class LoginResponse(BaseModel):
     message: str
 
 
+class RegisterRequest(BaseModel):
+    telegram_id: int
+    nome: str
+    cpf: str
+    pix: str
+    telefone: str
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
+
+
+
 @router.post("/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
     """
@@ -130,6 +141,72 @@ async def login(request: LoginRequest):
                 cadastro_completo=False,
                 message="Erro ao processar login"
             )
+
+
+@router.post("/register", response_model=LoginResponse)
+async def register(request: RegisterRequest):
+    """
+    Registra ou atualiza um jogador.
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            # Validar dados básicos
+            if not request.nome or not request.cpf or not request.pix or not request.telefone:
+                raise HTTPException(status_code=400, detail="Dados incompletos")
+
+            # Buscar usuário existente
+            result = await session.execute(
+                select(Usuario).where(Usuario.telegram_id == request.telegram_id)
+            )
+            usuario = result.scalar_one_or_none()
+            
+            if usuario:
+                # Atualizar existente
+                usuario.nome = request.nome
+                usuario.cpf = request.cpf
+                usuario.pix = request.pix
+                usuario.telefone = request.telefone
+                usuario.cidade = request.cidade
+                usuario.estado = request.estado
+                usuario.cadastro_completo = True
+                
+                # Reativar se estiver arquivado
+                if usuario.is_archived:
+                    usuario.is_archived = False
+                    usuario.data_arquivamento = None
+            else:
+                # Criar novo
+                usuario = Usuario(
+                    telegram_id=request.telegram_id,
+                    nome=request.nome,
+                    cpf=request.cpf,
+                    pix=request.pix,
+                    telefone=request.telefone,
+                    cidade=request.cidade,
+                    estado=request.estado,
+                    cadastro_completo=True,
+                    saldo=0.0,
+                    data_cadastro=datetime.utcnow()
+                )
+                session.add(usuario)
+            
+            await session.commit()
+            await session.refresh(usuario)
+            
+            return LoginResponse(
+                success=True,
+                telegram_id=usuario.telegram_id,
+                nome=usuario.nome,
+                cadastro_completo=True,
+                message="Cadastro realizado com sucesso"
+            )
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Erro ao registrar: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Erro ao processar cadastro")
+
 
 
 @router.post("/check-registration")

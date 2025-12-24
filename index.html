@@ -1259,14 +1259,15 @@
             setTimeout(() => lucide.createIcons(), 100);
         }
 
-        function nextStep(e, step) {
+        async function nextStep(e, step) {
             e.preventDefault();
             
             if (step === 3) {
                 // Salvar cadastro
-                saveRegistration().then(() => {
+                const success = await saveRegistration();
+                if (success) {
                     showScreen(step);
-                });
+                }
             } else {
                 showScreen(step);
             }
@@ -1277,20 +1278,58 @@
         }
 
         async function saveRegistration() {
-            const data = {
-                action: 'cadastro_usuario',
-                nome: document.getElementById('nome').value.trim(),
-                cpf: document.getElementById('cpf').value.replace(/\D/g, ''),
-                pix: document.getElementById('pix').value.trim(),
-                telefone: document.getElementById('telefone').value.replace(/\D/g, ''),
-                cidade: document.getElementById('cidade').value.trim() || null,
-                estado: document.getElementById('estado').value || null
-            };
+            const btn = document.querySelector('#form-payment button[type="submit"]');
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.innerHTML = '<div class="loader"></div>';
+                btn.disabled = true;
+            }
 
-            tg.sendData(JSON.stringify(data));
-            tg.showAlert('✅ Cadastro realizado com sucesso!');
-            tg.HapticFeedback.notificationOccurred('success');
-            state.registered = true;
+            try {
+                const data = {
+                    telegram_id: state.telegramId,
+                    nome: document.getElementById('nome').value.trim(),
+                    cpf: document.getElementById('cpf').value.replace(/\D/g, ''),
+                    pix: document.getElementById('pix').value.trim(),
+                    telefone: document.getElementById('telefone').value.replace(/\D/g, ''),
+                    cidade: document.getElementById('cidade').value.trim() || null,
+                    estado: document.getElementById('estado').value || null
+                };
+
+                const res = await fetch(`${API_BASE}/api/player/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await res.json();
+                
+                if (res.ok && result.success) {
+                    tg.showAlert('✅ Cadastro realizado com sucesso!');
+                    tg.HapticFeedback.notificationOccurred('success');
+                    state.registered = true;
+                    // Enviar dados para o bot também, para manter sincronia se necessário
+                    try {
+                        tg.sendData(JSON.stringify({...data, action: 'cadastro_usuario'}));
+                    } catch (e) {
+                         // Ignorar erro de sendData se estivermos no browser ou fora do contexto de botão
+                         console.warn("sendData ignorado", e);
+                    }
+                    return true;
+                } else {
+                     tg.showAlert('Erro: ' + (result.message || 'Erro desconhecido'));
+                     return false;
+                }
+            } catch (e) {
+                console.error(e);
+                tg.showAlert('Erro ao realizar cadastro. Verifique sua conexão.');
+                return false;
+            } finally {
+                if (btn) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            }
         }
 
         // ==================== MASKS ====================
