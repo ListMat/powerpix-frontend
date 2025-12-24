@@ -983,7 +983,7 @@ async def user_detail(
         result = await db.execute(
             select(Transacao)
             .where(Transacao.usuario_id == user_id)
-            .order_by(Transacao.data_transacao.desc())
+            .order_by(Transacao.created_at.desc())
             .limit(50)
         )
         transacoes = result.scalars().all()
