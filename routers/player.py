@@ -68,10 +68,16 @@ class RegisterRequest(BaseModel):
     telegram_id: int
     nome: str
     cpf: str
-    pix: str
+    pix: Optional[str] = None
     telefone: str
     cidade: Optional[str] = None
     estado: Optional[str] = None
+
+
+class UpdatePixRequest(BaseModel):
+    telegram_id: int
+    pix: str
+
 
 
 
@@ -150,8 +156,8 @@ async def register(request: RegisterRequest):
     """
     async with AsyncSessionLocal() as session:
         try:
-            # Validar dados básicos
-            if not request.nome or not request.cpf or not request.pix or not request.telefone:
+            # Validar dados básicos (Pix não é mais obrigatório no cadastro inicial)
+            if not request.nome or not request.cpf or not request.telefone:
                 raise HTTPException(status_code=400, detail="Dados incompletos")
 
             # Buscar usuário existente
@@ -202,7 +208,7 @@ async def register(request: RegisterRequest):
                 success=True,
                 telegram_id=usuario.telegram_id,
                 nome=usuario.nome,
-                cadastro_completo=True,
+                cadastro_completo=bool(usuario.pix), # Só é completo se tiver PIX
                 message="Cadastro realizado com sucesso"
             )
             
@@ -211,6 +217,41 @@ async def register(request: RegisterRequest):
         except Exception as e:
             logger.error(f"Erro ao registrar: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail="Erro ao processar cadastro")
+
+
+@router.post("/update-pix")
+async def update_pix(request: UpdatePixRequest):
+    """
+    Atualiza apenas a chave PIX do usuário.
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            if not request.pix:
+                raise HTTPException(status_code=400, detail="Chave PIX obrigatória")
+
+            result = await session.execute(
+                select(Usuario).where(Usuario.telegram_id == request.telegram_id)
+            )
+            usuario = result.scalar_one_or_none()
+            
+            if not usuario:
+                raise HTTPException(status_code=404, detail="Usuário não encontrado")
+            
+            usuario.pix = request.pix
+            
+            # Verificar se cadastro ficou completo
+            if usuario.nome and usuario.cpf and usuario.telefone:
+                usuario.cadastro_completo = True
+            
+            await session.commit()
+            
+            return {"success": True, "message": "Chave PIX atualizada com sucesso"}
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Erro ao atualizar PIX: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Erro ao atualizar PIX")
 
 
 

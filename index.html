@@ -858,7 +858,7 @@
             </div>
         </div>
 
-        <form id="form-personal" onsubmit="nextStep(event, 2)">
+        <form id="form-personal" onsubmit="nextStep(event, 3)">
             <div class="form-group">
                 <label>Nome Completo <span class="required">*</span></label>
                 <input type="text" class="form-input" id="nome" required placeholder="Seu nome completo">
@@ -936,8 +936,8 @@
             </div>
 
             <button type="submit" class="btn-primary">
-                Continuar
-                <i data-lucide="arrow-right" style="width: 20px; height: 20px;"></i>
+                Cadastrar
+                <i data-lucide="check" style="width: 20px; height: 20px;"></i>
             </button>
         </form>
 
@@ -1368,6 +1368,45 @@
             }
         }
 
+        async function savePixFromHome() {
+            const pixInput = document.getElementById('home-pix-input');
+            const pixValue = pixInput ? pixInput.value.trim() : '';
+
+            if (!pixValue) {
+                tg.showAlert("Digite uma chave Pix válida.");
+                return;
+            }
+
+            const btn = document.querySelector('#missing-pix-alert button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="loader"></div>';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/player/update-pix`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: state.telegramId, pix: pixValue })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    tg.showAlert("✅ Chave Pix salva com sucesso!");
+                    document.getElementById('missing-pix-alert').style.display = 'none';
+                    state.registered = true; // Agora está completo
+                } else {
+                    tg.showAlert("Erro: " + (data.message || data.detail || "Erro desconhecido"));
+                }
+            } catch (e) {
+                console.error(e);
+                tg.showAlert("Erro de conexão.");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
         // ==================== STEPPER ====================
 
         function showScreen(step) {
@@ -1433,7 +1472,8 @@
         }
 
         async function saveRegistration() {
-            const btn = document.querySelector('#form-payment button[type="submit"]');
+            // Alterado para buscar botão dentro do form de dados pessoais (screen 1)
+            const btn = document.querySelector('#form-personal button[type="submit"]');
             const originalText = btn ? btn.innerHTML : '';
             if (btn) {
                 btn.innerHTML = '<div class="loader"></div>';
@@ -1449,7 +1489,7 @@
                 const cidadeInput = document.getElementById('cidade');
                 const estadoInput = document.getElementById('estado');
 
-                if (!nomeInput || !cpfInput || !pixInput || !telefoneInput) {
+                if (!nomeInput || !cpfInput || !telefoneInput) {
                     tg.showAlert("Erro: Campos do formulário não encontrados no DOM.");
                     return false;
                 }
@@ -1458,14 +1498,14 @@
                     telegram_id: state.telegramId,
                     nome: nomeInput.value.trim(),
                     cpf: cpfInput.value.replace(/\D/g, ''),
-                    pix: pixInput.value.trim(),
+                    pix: null, // Pix nao obrigatorio no cadastro inicial
                     telefone: telefoneInput.value.replace(/\D/g, ''),
                     cidade: cidadeInput ? cidadeInput.value.trim() : null,
                     estado: estadoInput ? estadoInput.value : null
                 };
 
                 // Validar dados antes de enviar
-                if (!data.nome || !data.cpf || !data.pix || !data.telefone) {
+                if (!data.nome || !data.cpf || !data.telefone) {  // Removido pix da validação
                     tg.showAlert("Por favor, preencha todos os campos obrigatórios.");
                     return false;
                 }
@@ -1721,9 +1761,32 @@
                 state.concurso.dataSorteio = data.data_sorteio_prevista;
 
                 updateConcursoInfo();
+                updateConcursoInfo();
                 updateGameUI();
+
+                // Verificar se precisa pedir Pix
+                checkPixNeeded();
             } catch (e) {
                 console.error("Erro config", e);
+            }
+        }
+
+        async function checkPixNeeded() {
+            try {
+                const res = await fetch(`${API_BASE}/api/player/profile/${state.telegramId}`);
+                const data = await res.json();
+
+                if (res.ok) {
+                    const pixAlert = document.getElementById('missing-pix-alert');
+                    if (!data.pix) {
+                        pixAlert.style.display = 'block';
+                        setTimeout(() => lucide.createIcons(), 100);
+                    } else {
+                        pixAlert.style.display = 'none';
+                    }
+                }
+            } catch (e) {
+                console.error("Erro check pix", e);
             }
         }
 
