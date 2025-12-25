@@ -51,25 +51,56 @@ async def cmd_start(message: types.Message):
         )
         usuario = result.scalar_one_or_none()
         
-        # Não criar usuário automaticamente - deve se cadastrar pelo Mini App
-        if not usuario or not usuario.cadastro_completo:
+        # Se usuário não existe, criar automaticamente APENAS com telegram_id e nome
+        if not usuario:
+            try:
+                # Usar o nome do Telegram como nome inicial
+                telegram_name = message.from_user.full_name or message.from_user.first_name or f"User {message.from_user.id}"
+                
+                usuario = Usuario(
+                    telegram_id=message.from_user.id,
+                    nome=telegram_name,
+                    cadastro_completo=False
+                )
+                session.add(usuario)
+                await session.commit()
+                await session.refresh(usuario)
+                logger.info(f"🆕 Usuário criado automaticamente no /start: {usuario.id} (Telegram: {usuario.telegram_id})")
+                
+                # Tentar baixar foto
+                try:
+                    photo_url = await download_user_photo(bot, message.from_user.id)
+                    if photo_url:
+                        usuario.photo_url = photo_url
+                        await session.commit()
+                except Exception as e:
+                    logger.warning(f"Não foi possível baixar foto inicial: {e}")
+                    
+            except Exception as e:
+                logger.error(f"Erro ao criar usuário no /start: {e}", exc_info=True)
+                await message.answer("❌ Erro ao inicializar seu cadastro. Tente novamente.")
+                return
+
+        # Se cadastro não está completo, pedir para completar
+        if not usuario.cadastro_completo:
             await message.answer(
-                "👋 Bem-vindo ao PowerPix!\n\n"
-                "📝 Para começar, você precisa completar seu cadastro.\n\n"
-                "Clique no botão abaixo para abrir o Mini App e fazer seu cadastro:"
+                f"👋 Olá, {usuario.nome}!\n\n"
+                "✅ Sua conta foi criada com sucesso.\n"
+                "📝 Agora, para apostar e depositar, você precisa completar seu cadastro no Mini App.\n\n"
+                "Clique no botão abaixo para finalizar:"
             )
-            # Mostrar botão do Mini App mesmo sem cadastro completo
+            # Mostrar botão do Mini App
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [
                         InlineKeyboardButton(
-                            text="📝 Fazer Cadastro",
+                            text="📝 Completar Cadastro",
                             web_app=WebAppInfo(url=webapp_url)
                         )
                     ]
                 ]
             )
-            await message.answer("Clique no botão para começar:", reply_markup=keyboard)
+            await message.answer("Clique no botão para continuar:", reply_markup=keyboard)
             return
         
         # Se usuário existe e tem cadastro completo, atualizar foto se necessário
